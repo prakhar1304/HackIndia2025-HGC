@@ -1,0 +1,23 @@
+# Flask web framework and CORS support
+Flask==3.0.0
+Flask-CORS==4.0.0
+
+
+
+# Google Generative AI (Gemini) for AI-powered recommendations
+google-generativeai==0.3.2
+
+# MongoDB driver for database operations
+pymongo==4.6.0
+
+# Standard library dependencies (included with Python)
+# - json (built-in)
+# - re (built-in)
+# - dataclasses (built-in, Python 3.7+)
+# - typing (built-in, Python 3.5+)
+# - os (built-in)
+# - threading (built-in)
+
+# Optional: For better development experience
+python-dotenv==1.0.0  # For environment variable management
+requests==2.31.0     # For HTTP requests if needed
