@@ -36,6 +36,113 @@ GEMINI_API_KEY = "AIzaSyC5cpWLukKGSwY8YUHoFV5eOp1TIQTDId4"
 genai.configure(api_key=GEMINI_API_KEY)
 
 # ------------------------
+# User Persistence Functions
+# ------------------------
+
+def _load_users_from_file() -> List[Dict[str, Any]]:
+    """Load users from the persistence file"""
+    if not os.path.exists(USERS_FILE):
+        print(f"📁 Users file {USERS_FILE} not found, starting with empty users")
+        return []
+    
+    try:
+        with open(USERS_FILE, "r", encoding="utf-8") as f:
+            users = json.load(f)
+            print(f"📁 Loaded {len(users)} users from {USERS_FILE}")
+            return users
+    except Exception as e:
+        print(f"❌ Error loading users from file: {e}")
+        return []
+
+
+def _save_users_to_file(users: List[Dict[str, Any]]) -> None:
+    """Save users to the persistence file"""
+    try:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
+            print(f"💾 Saved {len(users)} users to {USERS_FILE}")
+    except Exception as e:
+        print(f"❌ Error saving users to file: {e}")
+
+
+def _add_user_to_file(user_data: Dict[str, Any]) -> None:
+    """Add a new user to the persistence file"""
+    users = _load_users_from_file()
+    
+    # Check if user already exists
+    user_id = user_data.get("userId")
+    existing_user = next((u for u in users if u.get("userId") == user_id), None)
+    
+    if existing_user:
+        # Update existing user
+        existing_user.update(user_data)
+        print(f"🔄 Updated existing user: {user_id}")
+    else:
+        # Add new user
+        users.append(user_data)
+        print(f"➕ Added new user: {user_id}")
+    
+    _save_users_to_file(users)
+
+
+def _load_users_into_metta() -> None:
+    """Load all users from file into MeTTa atom space"""
+    users = _load_users_from_file()
+    
+    if not users:
+        print("📝 No users to load into MeTTa")
+        return
+    
+    print(f"🔄 Loading {len(users)} users into MeTTa atom space...")
+    
+    for user_data in users:
+        try:
+            _load_single_user_into_metta(user_data)
+        except Exception as e:
+            print(f"❌ Error loading user {user_data.get('userId', 'unknown')}: {e}")
+    
+    print(f"✅ Successfully loaded {len(users)} users into MeTTa")
+
+
+def _load_single_user_into_metta(user_data: Dict[str, Any]) -> None:
+    """Load a single user's data into MeTTa atom space"""
+    uid = user_data.get("userId")
+    if not uid:
+        return
+    
+    uid = _ensure_symbol(uid)
+    
+    # Build MeTTa commands to add user data
+    lines: List[str] = [f"!(add-atom &users (user {uid}))"]
+    
+    # Add user preferences
+    watched = [_normalize_movie_id(_ensure_symbol(v)) for v in user_data.get("watched", [])]
+    liked = [_normalize_movie_id(_ensure_symbol(v)) for v in user_data.get("liked", [])]
+    disliked = [_normalize_movie_id(_ensure_symbol(v)) for v in user_data.get("disliked", [])]
+    fav_genres = [_q(v) for v in user_data.get("fav_genres", [])]
+    fav_actors = [_q(v) for v in user_data.get("fav_actors", [])]
+    fav_directors = [_q(v) for v in user_data.get("fav_directors", [])]
+    languages = [_q(v) for v in user_data.get("languages", [])]
+    countries = [_q(v) for v in user_data.get("countries", [])]
+    writers = [_q(v) for v in user_data.get("writers", [])]
+    
+    # Add all user data to MeTTa
+    lines += [f"!(add-atom &users (watched {uid} {v}))" for v in watched]
+    lines += [f"!(add-atom &users (liked {uid} {v}))" for v in liked]
+    lines += [f"!(add-atom &users (dislike {uid} {v}))" for v in disliked]
+    lines += [f"!(add-atom &users (fav-genre {uid} {g}))" for g in fav_genres]
+    lines += [f"!(add-atom &users (fav-actor {uid} {a}))" for a in fav_actors]
+    lines += [f"!(add-atom &users (fav-director {uid} {d}))" for d in fav_directors]
+    lines += [f"!(add-atom &users (language {uid} {l}))" for l in languages]
+    lines += [f"!(add-atom &users (country {uid} {c}))" for c in countries]
+    lines += [f"!(add-atom &users (writer {uid} {w}))" for w in writers]
+    
+    # Execute MeTTa commands
+    _run(lines)
+    print(f"✅ Loaded user {uid} into MeTTa")
+
+
+# ------------------------
 # MeTTa runtime
 # ------------------------
 
@@ -550,6 +657,22 @@ def add_user():
     lines += [f"!(add-atom &users (writer {uid} {w}))" for w in writers]
 
     _run(lines)
+    
+    # Save user to persistence file
+    user_data = {
+        "userId": uid,
+        "watched": watched,
+        "liked": liked,
+        "disliked": disliked,
+        "fav_genres": [v.strip('"') for v in fav_genres],
+        "fav_actors": [v.strip('"') for v in fav_actors],
+        "fav_directors": [v.strip('"') for v in fav_directors],
+        "languages": [v.strip('"') for v in languages],
+        "countries": [v.strip('"') for v in countries],
+        "writers": [v.strip('"') for v in writers]
+    }
+    _add_user_to_file(user_data)
+    
     print(f"User added: {uid}")
     
     # Save user data to file for persistence
@@ -687,6 +810,12 @@ def remove_user(user_id: str):
         elif len(inner) == 3:
             lines.append(f"!(remove-atom &users ({inner[0]} {inner[1]} {inner[2]}))")
     _run(lines)
+    
+    # Remove user from persistence file
+    users = _load_users_from_file()
+    users = [u for u in users if u.get("userId") != uid]
+    _save_users_to_file(users)
+    
     return jsonify({"ok": True})
 
 
