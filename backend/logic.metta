@@ -13,9 +13,16 @@
 ;!(match &movies $x $x)
 
 
-; at the very top of final/logic.metta
-!(register-module! ./final)
-!(import! &self final:movies_db)
+; at the very top of backend/logic.metta
+;!(register-module! ./backend)
+;!(import! &self backend:movies_db)
+
+
+; Register current directory as 'backend' module
+!(register-module! .)
+
+; Import movies_db from current directory
+!(import! &self movies_db)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Helpers

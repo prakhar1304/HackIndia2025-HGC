@@ -24,7 +24,7 @@ except Exception:
 # Config
 # ------------------------
 
-LOGIC_FILE = "final/logic.metta"
+LOGIC_FILE = "./logic.metta"
 
 MONGODB_URI = "mongodb+srv://prakhar1304_db_user:pkm1234@cluster0.nvhwwbv.mongodb.net/"
 MONGODB_DB = "metta_recsys"
@@ -46,7 +46,7 @@ def _new_metta() -> MeTTa:
     m = MeTTa()
     with open(LOGIC_FILE, "r", encoding="utf-8") as f:
         res  = m.run(f.read())
-        # print( "read" ,res)
+        print( "read" ,res)
     return m
 
 
