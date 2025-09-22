@@ -21,6 +21,9 @@ export const unlikeNgrok = async (userId: string, imdbId: string) => {
 };
 
 export const addToHistoryNgrok = async (userId: string, imdbId: string) => {
+
+  console.log("adding to history", userId, imdbId);
+    
   const { data } = await api.post(`/api/users/${userId}/history/${imdbId}` , 
     {
     "viewDuration": 7200

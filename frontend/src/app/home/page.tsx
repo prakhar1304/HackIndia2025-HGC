@@ -54,6 +54,8 @@ export default function HomePage() {
         await patchLocalUser(localId, { merge: true, watched: ["m_" + imdbId] })
       }
       if (ngId && isImdb(imdbId)) {
+        console.log("adding to history", ngId, imdbId);
+        
         await addToHistoryNgrok(ngId, imdbId)
       }
     } catch {}
@@ -62,37 +64,56 @@ export default function HomePage() {
   const movies = useMemo(() => allMovies, [])
 
   useEffect(() => {
-    if (!userId) return
-    getCollabRecommendations(userId)
-      .then((items) => setRecs(items))
-      .catch(() => setRecs([]))
-  }, [userId])
+    // Sequential loading for MeTTa APIs only
+    const loadMeTTaAPIs = async () => {
+      try {
+        console.log('�� Loading MeTTa APIs sequentially...')
+        
+        // Load MeTTa APIs one by one
+        const recommendations = await getCollabRecommendations(userId || 'bob')
+        setRecs(recommendations)
+        
+        const countryMovies = await getByCountryLocal()
+        setIndia(countryMovies)
+        
+        console.log('✅ MeTTa APIs loaded successfully')
+        
+      } catch (error) {
+        console.error('❌ Error loading MeTTa APIs:', error)
+        setRecs([])
+        setIndia([])
+      }
+    }
 
-  useEffect(() => {
-    getTopRated(5)
-      .then(setTopRated)
-      .catch(() => setTopRated([]))
-    getByGenre("Action", 10)
-      .then(setAction)
-      .catch(() => setAction([]))
-    getByGenre("Comedy", 10)
-      .then(setComedy)
-      .catch(() => setComedy([]))
-    getByGenre("Thriller", 10)
-      .then(setThriller)
-      .catch(() => setThriller([]))
-    getByCountryLocal()
-      .then(setIndia)
-      .catch(() => setIndia([]))
-    const ngId = localStorage.getItem("ngrokUserId") || undefined
-    recommendBySeedMovie("tt0250223", ngId)
-      .then(setSeedMovie)
-      .catch(() => setSeedMovie([]))
-    if (ngId)
-      recommendForUser(ngId)
-        .then(setUserRecs)
-        .catch(() => setUserRecs([]))
-  }, [])
+    // Load non-MeTTa APIs in parallel (these are safe)
+    const loadNonMeTTaAPIs = () => {
+      getTopRated(5)
+        .then(setTopRated)
+        .catch(() => setTopRated([]))
+      getByGenre("Action", 10)
+        .then(setAction)
+        .catch(() => setAction([]))
+      getByGenre("Comedy", 10)
+        .then(setComedy)
+        .catch(() => setComedy([]))
+      getByGenre("Thriller", 10)
+        .then(setThriller)
+        .catch(() => setThriller([]))
+      
+      const ngId = localStorage.getItem("ngrokUserId") || undefined
+      recommendBySeedMovie("tt0250223", ngId)
+        .then(setSeedMovie)
+        .catch(() => setSeedMovie([]))
+      if (ngId)
+        recommendForUser(ngId)
+          .then(setUserRecs)
+          .catch(() => setUserRecs([]))
+    }
+
+    // Execute both loading strategies
+    loadMeTTaAPIs()
+    loadNonMeTTaAPIs()
+  }, [userId])
 
   const movieRows = [
     {
