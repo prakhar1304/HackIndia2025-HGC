@@ -25,6 +25,7 @@ except Exception:
 # ------------------------
 
 LOGIC_FILE = "./logic.metta"
+USER_FILE = "./user.metta"
 
 MONGODB_URI = "mongodb+srv://prakhar1304_db_user:pkm1234@cluster0.nvhwwbv.mongodb.net/"
 MONGODB_DB = "metta_recsys"
@@ -46,7 +47,11 @@ def _new_metta() -> MeTTa:
     m = MeTTa()
     with open(LOGIC_FILE, "r", encoding="utf-8") as f:
         res  = m.run(f.read())
-        print( "read" ,res)
+        # print( "read" ,res)
+    
+    # Load existing users from file
+    # _load_users_from_file()
+    
     return m
 
 
@@ -104,6 +109,84 @@ def _unique(seq: List[str]) -> List[str]:
             seen.add(x)
             out.append(x)
     return out
+
+
+def _save_user_to_file(user_id: str, user_data: Dict[str, Any]) -> None:
+    """
+    Save user data to user.metta file for persistence across server restarts
+    """
+    try:
+        # Prepare user data in MeTTa format
+        lines = [f"!(add-atom &users (user {user_id}))"]
+        
+        # Add user preferences
+        for genre in user_data.get("fav_genres", []):
+            lines.append(f'!(add-atom &users (fav-genre {user_id} "{genre}"))')
+        
+        for actor in user_data.get("fav_actors", []):
+            lines.append(f'!(add-atom &users (fav-actor {user_id} "{actor}"))')
+        
+        for director in user_data.get("fav_directors", []):
+            lines.append(f'!(add-atom &users (fav-director {user_id} "{director}"))')
+        
+        for language in user_data.get("languages", []):
+            lines.append(f'!(add-atom &users (language {user_id} "{language}"))')
+        
+        for country in user_data.get("countries", []):
+            lines.append(f'!(add-atom &users (country {user_id} "{country}"))')
+        
+        for writer in user_data.get("writers", []):
+            lines.append(f'!(add-atom &users (writer {user_id} "{writer}"))')
+        
+        # Add movie interactions
+        for movie_id in user_data.get("watched", []):
+            normalized_id = _normalize_movie_id(movie_id)
+            lines.append(f"!(add-atom &users (watched {user_id} {normalized_id}))")
+        
+        for movie_id in user_data.get("liked", []):
+            normalized_id = _normalize_movie_id(movie_id)
+            lines.append(f"!(add-atom &users (liked {user_id} {normalized_id}))")
+        
+        for movie_id in user_data.get("disliked", []):
+            normalized_id = _normalize_movie_id(movie_id)
+            lines.append(f"!(add-atom &users (dislike {user_id} {normalized_id}))")
+        
+        # Append to user.metta file (don't overwrite existing data)
+        with open(USER_FILE, "a", encoding="utf-8") as f:
+            f.write(f"\n; User: {user_id} - Added on {__import__('datetime').datetime.now()}\n")
+            for line in lines:
+                f.write(line + "\n")
+            f.write("\n")
+        
+        print(f"✅ User {user_id} saved to {USER_FILE}")
+        
+    except Exception as e:
+        print(f"❌ Error saving user {user_id} to file: {e}")
+
+
+# def _load_users_from_file() -> None:
+    """
+    Load existing users from user.metta file into MeTTa space
+    """
+    try:
+        if not os.path.exists(USER_FILE):
+            print(f"📁 {USER_FILE} not found, creating new file")
+            with open(USER_FILE, "w", encoding="utf-8") as f:
+                f.write("!(bind! &users (new-space))\n")
+            return
+        
+        with open(USER_FILE, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        if content.strip():
+            print(f"📖 Loading users from {USER_FILE}")
+            _get_metta().run(content)
+            print("✅ Users loaded successfully")
+        else:
+            print(f"📁 {USER_FILE} is empty")
+            
+    except Exception as e:
+        print(f"❌ Error loading users from file: {e}")
 
 
 # ------------------------
@@ -216,51 +299,144 @@ def _parse_user_preferences(facts: List[str]) -> Dict[str, List[str]]:
     return preferences
 
 
-def _create_gemini_prompt(user_prefs: Dict[str, List[str]], movies: List[Dict[str, Any]], rec_type: str) -> str:
-    """Create a structured prompt for Gemini AI"""
+def _clean_movie_data(movie: Dict[str, Any]) -> Dict[str, Any]:
+    """Clean movie data by removing N/A values and formatting arrays properly"""
+    cleaned = movie.copy()
     
-    movies_text = json.dumps(movies, indent=2)[:8000]  # Limit size for API
+    # Clean director field
+    if 'Director' in cleaned:
+        if isinstance(cleaned['Director'], list):
+            # Remove N/A and empty values
+            directors = [d for d in cleaned['Director'] if d and d != 'N/A' and d.strip()]
+            cleaned['Director'] = ', '.join(directors) if directors else 'Unknown'
+        elif cleaned['Director'] == 'N/A' or not cleaned['Director']:
+            cleaned['Director'] = 'Unknown'
+    
+    # Clean genre field
+    if 'Genre' in cleaned:
+        if isinstance(cleaned['Genre'], list):
+            genres = [g for g in cleaned['Genre'] if g and g != 'N/A' and g.strip()]
+            cleaned['Genre'] = ', '.join(genres) if genres else 'Unknown'
+        elif cleaned['Genre'] == 'N/A' or not cleaned['Genre']:
+            cleaned['Genre'] = 'Unknown'
+    
+    # Clean actors field
+    if 'Actors' in cleaned:
+        if isinstance(cleaned['Actors'], list):
+            actors = [a for a in cleaned['Actors'] if a and a != 'N/A' and a.strip()]
+            cleaned['Actors'] = ', '.join(actors) if actors else 'Unknown'
+        elif cleaned['Actors'] == 'N/A' or not cleaned['Actors']:
+            cleaned['Actors'] = 'Unknown'
+    
+    # Clean country field
+    if 'Country' in cleaned:
+        if isinstance(cleaned['Country'], list):
+            countries = [c for c in cleaned['Country'] if c and c != 'N/A' and c.strip()]
+            cleaned['Country'] = ', '.join(countries) if countries else 'Unknown'
+        elif cleaned['Country'] == 'N/A' or not cleaned['Country']:
+            cleaned['Country'] = 'Unknown'
+    
+    # Clean language field
+    if 'Language' in cleaned:
+        if isinstance(cleaned['Language'], list):
+            languages = [l for l in cleaned['Language'] if l and l != 'N/A' and l.strip()]
+            cleaned['Language'] = ', '.join(languages) if languages else 'Unknown'
+        elif cleaned['Language'] == 'N/A' or not cleaned['Language']:
+            cleaned['Language'] = 'Unknown'
+    
+    return cleaned
+
+
+def _create_gemini_prompt(user_prefs: Dict[str, List[str]], movies: List[Dict[str, Any]], rec_type: str) -> str:
+    """Create a structured prompt for Gemini AI with enhanced reasoning"""
+    
+    # Clean movie data before sending to Gemini
+    cleaned_movies = [_clean_movie_data(movie) for movie in movies]
+    movies_text = json.dumps(cleaned_movies, indent=2)[:8000]  # Limit size for API
+    
+    # Extract user name if available (assuming first user preference or default)
+    user_name = "User"  # Default fallback
     
     prompt = f"""
-You are a movie recommendation expert. Analyze the user's preferences and the candidate movies to provide the top 10 personalized recommendations with detailed reasons.
+You are an expert movie recommendation system with deep understanding of user preferences and movie characteristics. Your task is to provide highly personalized movie recommendations with detailed, specific reasoning for each recommendation.
 
-USER PREFERENCES:
+USER PROFILE:
+- Name: {user_name}
 - Favorite Genres: {', '.join(user_prefs.get('fav_genres', []))}
 - Favorite Directors: {', '.join(user_prefs.get('fav_directors', []))}
 - Favorite Actors: {', '.join(user_prefs.get('fav_actors', []))}
 - Preferred Languages: {', '.join(user_prefs.get('languages', []))}
 - Preferred Countries: {', '.join(user_prefs.get('countries', []))}
-- Liked Movies: {', '.join(user_prefs.get('liked', []))}
+- Previously Liked Movies: {', '.join(user_prefs.get('liked', []))}
 - Disliked Movies: {', '.join(user_prefs.get('disliked', []))}
+- Previously Watched: {', '.join(user_prefs.get('watched', []))}
 
 RECOMMENDATION TYPE: {rec_type}
 
-CANDIDATE MOVIES:
+CANDIDATE MOVIES TO ANALYZE:
 {movies_text}
 
-Please analyze these movies and return EXACTLY this JSON structure:
+ANALYSIS REQUIREMENTS:
+For each recommended movie, provide detailed reasoning in this EXACT format:
+
+"[Movie Title] was recommended because:
+• [Specific reason 1] (e.g., "Genre = Sci-Fi matches {user_name}'s preference")
+• [Specific reason 2] (e.g., "Director = Christopher Nolan (same as Inception)")
+• [Specific reason 3] (e.g., "Not yet watched by {user_name}")
+• [Additional contextual reasons]"
+
+Return EXACTLY this JSON structure:
 {{
     "recommendations": [
         {{
-            "movie": {{movie object from the candidate list}},
-            "reason": "Specific reason why this movie matches user preferences (2-3 sentences)",
-            "match_score": {{number between 0-100 indicating how well it matches}},
-            "key_matches": [{{list of specific preference matches like "Genre: Action", "Director: Christopher Nolan"}}]
+            "movie": {{exact movie object from candidate list}},
+            "reason": {{
+                "title": "[Movie Title] was recommended because:",
+                "points": [
+                    "[Specific reason 1]",
+                    "[Specific reason 2]", 
+                    "[Specific reason 3]",
+                    "[Additional reasons if applicable]"
+                ],
+                "summary": "Brief one-line summary of why this movie was chosen"
+            }},
+            "match_score": {{number between 0-100}},
+            "key_matches": ["Genre: [genre]", "Director: [director]", "Actor: [actor]", "Rating: [rating]", "Country: [country]"]
         }}
     ],
-    "summary": "Overall summary of why these recommendations were chosen",
+    "summary": "Overall summary explaining the recommendation strategy and why these movies were selected for {user_name}",
     "total_analyzed": {{total number of movies analyzed}},
-    "recommendation_strategy": "Brief explanation of the recommendation approach used"
+    "recommendation_strategy": "Detailed explanation of how {rec_type} filtering was applied to find the best matches"
 }}
 
-IMPORTANT RULES:
+CRITICAL INSTRUCTIONS:
 1. Return EXACTLY 10 recommendations (or fewer if less than 10 movies available)
 2. Rank by match_score (highest first)
-3. Provide specific, personalized reasons
-4. Use the exact movie objects from the candidate list
-5. If no movies available, return empty recommendations array
-6. Keep reasons concise but informative
-7. Consider user's dislikes to avoid similar movies
+3. Use the EXACT movie objects from the candidate list
+4. Provide specific, personalized reasons mentioning {user_name} by name
+5. Include concrete details like genre, director, actor names, ratings, countries
+6. Reference previously liked movies when relevant
+7. Avoid movies similar to disliked ones
+8. Consider cultural preferences (languages, countries)
+9. Mention if movie hasn't been watched yet
+10. Keep reasons detailed but concise (3-5 bullet points per movie)
+11. Use bullet points (•) in the reason field for better readability
+12. If no movies available, return empty recommendations array
+13. NEVER mention "N/A", "Unknown", or missing data in reasons - focus on positive aspects
+14. If director/actor is unknown, focus on genre, rating, country, or other available data
+
+EXAMPLE REASONING FORMAT:
+"Interstellar was recommended because:
+• Genre = Sci-Fi matches {user_name}'s preference
+• Director = Christopher Nolan (same as Inception)
+• Not yet watched by {user_name}
+• High rating (8.6) with excellent reviews"
+
+"Dangal was recommended because:
+• {user_name} prefers family-friendly content
+• Highly rated (8.5) drama from India
+• Features inspirational sports theme
+• Not in {user_name}'s watched list"
 """
 
     return prompt
@@ -270,18 +446,42 @@ def _create_fallback_response(movies: List[Dict[str, Any]], rec_type: str) -> Di
     """Create fallback response when Gemini AI is not available"""
     recommendations = []
     for i, movie in enumerate(movies[:10]):
+        # Clean movie data for fallback
+        cleaned_movie = _clean_movie_data(movie)
+        movie_title = cleaned_movie.get("Title", "Unknown Movie")
+        genre = cleaned_movie.get("Genre", "Unknown")
+        director = cleaned_movie.get("Director", "Unknown")
+        rating = cleaned_movie.get("imdbRating", "N/A")
+        country = cleaned_movie.get("Country", "Unknown")
+        
+        # Create structured reason object
+        reason_points = []
+        if genre != "Unknown":
+            reason_points.append(f"Genre = {genre} matches your preferences")
+        if director != "Unknown":
+            reason_points.append(f"Director = {director} has created quality films")
+        if rating != "N/A":
+            reason_points.append(f"High rating ({rating}) indicates good quality")
+        if country != "Unknown":
+            reason_points.append(f"From {country} - matches your regional preferences")
+        reason_points.append(f"Recommended based on {rec_type} filtering algorithm")
+        
         recommendations.append({
-            "movie": movie,
-            "reason": f"Recommended based on {rec_type} filtering algorithm matching your preferences.",
+            "movie": movie,  # Return original movie object
+            "reason": {
+                "title": f"{movie_title} was recommended because:",
+                "points": reason_points,
+                "summary": f"Quality {genre.lower()} film recommended based on your preferences"
+            },
             "match_score": max(90 - i * 5, 60),  # Decreasing scores
-            "key_matches": ["Algorithm-based match"]
+            "key_matches": [f"Genre: {genre}", f"Director: {director}", f"Rating: {rating}", f"Country: {country}"]
         })
     
     return {
         "recommendations": recommendations,
         "summary": f"Top {len(recommendations)} {rec_type} recommendations based on your viewing history and preferences",
         "total_analyzed": len(movies),
-        "recommendation_strategy": f"MeTTa {rec_type} filtering algorithm"
+        "recommendation_strategy": f"MeTTa {rec_type} filtering algorithm with fallback reasoning"
     }
 
 
@@ -351,6 +551,21 @@ def add_user():
 
     _run(lines)
     print(f"User added: {uid}")
+    
+    # Save user data to file for persistence
+    user_data = {
+        "fav_genres": p.get("fav_genres", []),
+        "fav_actors": p.get("fav_actors", []),
+        "fav_directors": p.get("fav_directors", []),
+        "languages": p.get("languages", []),
+        "countries": p.get("countries", []),
+        "writers": p.get("writers", []),
+        "watched": p.get("watched", []),
+        "liked": p.get("liked", []),
+        "disliked": p.get("disliked", [])
+    }
+    _save_user_to_file(uid, user_data)
+    
     return jsonify({"ok": True, "userId": uid})
 
 
@@ -438,6 +653,21 @@ def update_user(user_id: str):
     lines += replace("writer", writers)
 
     _run(lines)
+    
+    # Save updated user data to file for persistence
+    user_data = {
+        "fav_genres": p.get("fav_genres", []),
+        "fav_actors": p.get("fav_actors", []),
+        "fav_directors": p.get("fav_directors", []),
+        "languages": p.get("languages", []),
+        "countries": p.get("countries", []),
+        "writers": p.get("writers", []),
+        "watched": p.get("watched", []),
+        "liked": p.get("liked", []),
+        "disliked": p.get("disliked", [])
+    }
+    _save_user_to_file(uid, user_data)
+    
     return jsonify({"ok": True, "userId": uid})
 
 
@@ -500,7 +730,7 @@ def recommend_content(user_id: str):
     
     # Get MeTTa recommendations
     mids = _atoms_to_strings(_get_metta().run(f"!(fill-l2 {uid} )"))
-    print(f"MeTTa content mids: {mids}")
+    # print(f"MeTTa content mids: {mids}")
     
     mids = _unique(mids)
     imdb_ids = _metta_ids_to_imdb(mids)
