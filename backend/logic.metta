@@ -6,7 +6,7 @@
 ; Spaces and imports
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-!(bind! &users (new-space))
+;!(bind! &users (new-space))
 
 ; movies DB binds &movies internally and populates it
 ; !(import! &self movies_db)
@@ -23,6 +23,7 @@
 
 ; Import movies_db from current directory
 !(import! &self movies_db)
+!(import! &self user)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Helpers
@@ -48,31 +49,6 @@
 (= (user-watched $u) (match &users (watched $u $m) $m))
 (= (users-all) (match &users (user $u) $u))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Demo user for testing (preloaded)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-!(add-atom &users (user bob))
-!(add-atom &users (country bob "United States"))
-!(add-atom &users (language bob "English"))
-!(add-atom &users (language bob "Japanese"))
-!(add-atom &users (watched bob m_tt1198153))
-!(add-atom &users (watched bob m_tt0081506))
-!(add-atom &users (liked bob m_tt0162866))
-!(add-atom &users (liked bob m_tt0081506))
-!(add-atom &users (fav-genre bob "Drama"))
-!(add-atom &users (fav-genre bob "Action"))
-!(add-atom &users (fav-genre bob "History"))
-!(add-atom &users (fav-actor bob "Matthew McConaughey"))
-!(add-atom &users (fav-actor bob "Tomisaburô Wakayama"))
-!(add-atom &users (fav-actor bob "Minoru Ôki"))
-!(add-atom &users (fav-director bob "Alfonso Cuarón"))
-!(add-atom &users (fav-director bob "Robert Houston"))
-!(add-atom &users (fav-director bob "Christopher Nolan"))
-!(add-atom &users (writer bob "Kazuo Koike"))
-!(add-atom &users (dislike bob m_tt0162862))
-
-; Quick smoke test traces are placed at the end of the file after definitions
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Content-based recommendation (two-step: candidates, then filter)
@@ -199,13 +175,6 @@
 (= (similar-users-list $u $v)
     (match &users (country $u $c) (match &users (country $v $c) $v)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Demo traces (after definitions)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; !(trace! (demo rec-content bob) (match &self (rec-content bob $m) $m))
-; !(trace! (demo rec-collab bob) (match &self (rec-collab bob $m) $m))
-; !(trace! (demo rec-content-min bob)  (rec-content-min bob $m) $m)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Search helpers (contextual fields are in &movies)
@@ -277,40 +246,6 @@
 ; !(trace! (debug content bob) (match &self (content_debug bob $m) $m))
 
 
-     ; users
-            ;  !(add-atom &users (user alice))
-            ;  !(add-atom &users (watched alice m_inception))
-            ;  !(add-atom &users (watched alice m_matrix))
-            ;  !(add-atom &users (watched alice m_memento))
-            ;  !(add-atom &users (liked alice m_inception))
-            ;  !(add-atom &users (liked alice m_memento))
-            ;  !(add-atom &users (fav-genre alice g_sci-fi))
-            ;  !(add-atom &users (fav-genre alice g_thriller))
-            ;  !(add-atom &users (fav-actor alice a_dicaprio))
-            ;  !(add-atom &users (fav-actor alice a_reeves))
-            ;  !(add-atom &users (fav-director alice d_nolan))
-
-!(add-atom &users(user bob) )
-!(add-atom &users (country bob "United States"))
-!(add-atom &users(language bob "English"))
-!(add-atom &users(language bob "Japanese"))
-!(add-atom &users(watched bob m_tt1198153))
-!(add-atom &users(watched bob m_tt0081506))
-!(add-atom &users(liked bob m_tt0162866) )
-!(add-atom &users(liked bob m_tt0081506) )
-!(add-atom &users(fav-genre bob "Drama"))
-!(add-atom &users(fav-genre bob "Action"))
-!(add-atom &users(fav-genre bob "History"))
-!(add-atom &users(fav-actor bob "Matthew McConaughey"))
-!(add-atom &users(fav-actor bob "Tomisaburô Wakayama"))
-!(add-atom &users(fav-actor bob "Minoru Ôki"))
-!(add-atom &users(fav-director bob "Alfonso Cuarón"))
-!(add-atom &users(fav-director bob "Robert Houston"))
-!(add-atom &users(fav-director bob "Christopher Nolan"))
-!(add-atom &users(writer bob "Kazuo Koike"))
-
-; !(match &users $x $x)
-; !(content-any bob $m)
 
 
 (= (fill-l2 $u)
@@ -347,11 +282,11 @@
        )
        $m)))
 
-       !(fill-l2 bob) 
+!(fill-l2 bob) 
 
 
 
-       ; Pass if there exists a common favorite genre
+; Pass if there exists a common favorite genre
 (= (exists-common-genre $u $v)
    (match &users (fav-genre $u $g)
      (match &users (fav-genre $v $g) True)))
@@ -395,3 +330,37 @@
                  True))
        )
        (similar-user-min $u $v))))
+
+
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;collaborative  search     
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+
+
+(= (get-unwatched-movies-from-others $current_user)
+   (match &users (user $other_user)
+       (if (== $current_user $other_user)
+           ()  ; Skip current user
+           (match &users (watched $other_user $movie) 
+               (match &self (not-watched $current_user $movie) $movie)))))  ; Only return unwatched movies
+
+(= (get-movies-from-other-users-check $current_user)
+   (match &users (user $other_user)
+       (if (== $current_user $other_user)
+           ()  ; Skip current user
+           (match &users (watched $other_user $movie) $movie)
+           )))  ; Get their movies               
+
+(= (not-watched $c $m )
+   (match &users (watched  $c $cm)  
+                 (if (== $cm $m)
+                     (trace! ("user-has-watched" $c $m  $cm) ())
+                     (trace! ("user-has-not-watched" $c $m $cm ) ($cm))
+                  )
+   )
+)
+
+(= (collaborative-search $u)
+    (let $x  (get-movies-from-other-users-check $u) (not-watched $u $x)) 
+)
