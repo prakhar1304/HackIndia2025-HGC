@@ -25,7 +25,7 @@ export default function SearchPage() {
   const [q, setQ] = useState(initialQ);
   const [genre, setGenre] = useState<string>("all");
   const [year, setYear] = useState<string>("all");
-  const [view, setView] = useState<"grid" | "slider">("grid");
+  const [view, setView] = useState<"grid" | "slider">("slider");
 
   const [actor, setActor] = useState<string>("");
   const [director, setDirector] = useState<string>("");

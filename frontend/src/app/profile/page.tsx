@@ -11,12 +11,38 @@ export default function ProfilePage() {
   const { userId, logout } = useLocalAuth();
   const [profile, setProfile] = useState<any>(null);
   const [likedNg, setLikedNg] = useState<any[]>([]);
+  const [profileLoading, setProfileLoading] = useState<boolean>(true);
+  const [likedLoading, setLikedLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (!userId) return;
-    getLocalProfile(userId).then((d) => setProfile(d.profile));
+    
+    setProfileLoading(true);
+    setLikedLoading(true);
+    
+    getLocalProfile(userId)
+      .then((d) => {
+        setProfile(d.profile);
+        setProfileLoading(false);
+      })
+      .catch(() => {
+        setProfileLoading(false);
+      });
+      
     const ngUser = localStorage.getItem("ngrokUserId");
-    if (ngUser) getLikedNgrok(ngUser).then(setLikedNg).catch(()=>setLikedNg([]));
+    if (ngUser) {
+      getLikedNgrok(ngUser)
+        .then((data) => {
+          setLikedNg(data);
+          setLikedLoading(false);
+        })
+        .catch(() => {
+          setLikedNg([]);
+          setLikedLoading(false);
+        });
+    } else {
+      setLikedLoading(false);
+    }
   }, [userId]);
 
   if (!userId) {
@@ -57,7 +83,7 @@ export default function ProfilePage() {
               onClick={addSample}
               className="border-2 border-black shadow-[4px_4px_0_0_#000] hover:shadow-[6px_6px_0_0_#000] font-bold bg-transparent"
             >
-              Patch sample
+              Update Profile
             </Button>
             <Button
               variant="destructive"
@@ -80,33 +106,72 @@ export default function ProfilePage() {
       <section className="mt-8 grid gap-6 md:grid-cols-3">
         <div className="rounded-xl border-4 border-black bg-gradient-to-br from-purple-100 to-purple-200 p-6 shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-shadow">
           <h3 className="font-black text-xl text-black">🎭 Top Genres</h3>
-          <ul className="mt-3 text-base font-semibold text-black">
-            {(profile?.fav_genres || ["Action", "Drama", "Sci-Fi"]).slice(0, 5).map((g: string) => (
-              <li key={g} className="mt-2 p-2 bg-white rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000]">
-                {g}
-              </li>
-            ))}
-          </ul>
+          {profileLoading ? (
+            <div className="mt-3 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-gray-200 rounded-lg border-2 border-gray-300 animate-pulse"></div>
+              ))}
+            </div>
+          ) : (
+            <ul className="mt-3 text-base font-semibold text-black">
+              {(profile?.fav_genres || []).slice(0, 5).map((g: string) => (
+                <li key={g} className="mt-2 p-2 bg-white rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000]">
+                  {g}
+                </li>
+              ))}
+              {(!profile?.fav_genres || profile.fav_genres.length === 0) && (
+                <li className="mt-2 p-2 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500">
+                  No genres yet
+                </li>
+              )}
+            </ul>
+          )}
         </div>
         <div className="rounded-xl border-4 border-black bg-gradient-to-br from-purple-100 to-purple-200 p-6 shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-shadow">
           <h3 className="font-black text-xl text-black">⭐ Favorite Actors</h3>
-          <ul className="mt-3 text-base font-semibold text-black">
-            {(profile?.fav_actors || ["Keanu Reeves", "Gong Li"]).slice(0, 5).map((a: string) => (
-              <li key={a} className="mt-2 p-2 bg-white rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000]">
-                {a}
-              </li>
-            ))}
-          </ul>
+          {profileLoading ? (
+            <div className="mt-3 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-gray-200 rounded-lg border-2 border-gray-300 animate-pulse"></div>
+              ))}
+            </div>
+          ) : (
+            <ul className="mt-3 text-base font-semibold text-black">
+              {(profile?.fav_actors || []).slice(0, 5).map((a: string) => (
+                <li key={a} className="mt-2 p-2 bg-white rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000]">
+                  {a}
+                </li>
+              ))}
+              {(!profile?.fav_actors || profile.fav_actors.length === 0) && (
+                <li className="mt-2 p-2 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500">
+                  No actors yet
+                </li>
+              )}
+            </ul>
+          )}
         </div>
         <div className="rounded-xl border-4 border-black bg-gradient-to-br from-purple-100 to-purple-200 p-6 shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-shadow">
           <h3 className="font-black text-xl text-black">🎬 Favorite Directors</h3>
-          <ul className="mt-3 text-base font-semibold text-black">
-            {(profile?.fav_directors || ["Christopher Nolan", "Robert Houston"]).slice(0, 5).map((d: string) => (
-              <li key={d} className="mt-2 p-2 bg-white rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000]">
-                {d}
-              </li>
-            ))}
-          </ul>
+          {profileLoading ? (
+            <div className="mt-3 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-gray-200 rounded-lg border-2 border-gray-300 animate-pulse"></div>
+              ))}
+            </div>
+          ) : (
+            <ul className="mt-3 text-base font-semibold text-black">
+              {(profile?.fav_directors || []).slice(0, 5).map((d: string) => (
+                <li key={d} className="mt-2 p-2 bg-white rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000]">
+                  {d}
+                </li>
+              ))}
+              {(!profile?.fav_directors || profile.fav_directors.length === 0) && (
+                <li className="mt-2 p-2 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500">
+                  No directors yet
+                </li>
+              )}
+            </ul>
+          )}
         </div>
       </section>
 
@@ -114,10 +179,45 @@ export default function ProfilePage() {
       <section className="mt-8 grid gap-6 md:grid-cols-2">
         <div className="rounded-xl border-4 border-black bg-white p-6 shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-shadow">
           <h3 className="font-black text-xl text-black">❤️ Liked Movies</h3>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {(likedNg || []).map((entry: any) => {
-              const m = entry.movie || entry;
-              return (
+          {likedLoading ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded-lg border-2 border-gray-300 animate-pulse"></div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {(likedNg || []).map((entry: any) => {
+                const m = entry.movie || entry;
+                return (
+                  <div
+                    key={m.imdbID}
+                    className="rounded-lg border-3 border-black p-4 shadow-[6px_6px_0_0_#000] bg-purple-50 hover:bg-purple-100 transition-colors"
+                  >
+                    <div className="font-black text-black">{m.Title}</div>
+                    <div className="text-sm font-semibold text-purple-700">{(m.Genre || []).join(", ")}</div>
+                  </div>
+                );
+              })}
+              {(!likedNg || likedNg.length === 0) && (
+                <div className="col-span-2 p-4 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500 text-center">
+                  No liked movies yet
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="rounded-xl border-4 border-black bg-white p-6 shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-shadow">
+          <h3 className="font-black text-xl text-black">👀 Watched Recently</h3>
+          {profileLoading ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded-lg border-2 border-gray-300 animate-pulse"></div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {(profile?.watched_movies || []).map((m: any) => (
                 <div
                   key={m.imdbID}
                   className="rounded-lg border-3 border-black p-4 shadow-[6px_6px_0_0_#000] bg-purple-50 hover:bg-purple-100 transition-colors"
@@ -125,23 +225,14 @@ export default function ProfilePage() {
                   <div className="font-black text-black">{m.Title}</div>
                   <div className="text-sm font-semibold text-purple-700">{(m.Genre || []).join(", ")}</div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="rounded-xl border-4 border-black bg-white p-6 shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-shadow">
-          <h3 className="font-black text-xl text-black">👀 Watched Recently</h3>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {(profile?.watched_movies || []).map((m: any) => (
-              <div
-                key={m.imdbID}
-                className="rounded-lg border-3 border-black p-4 shadow-[6px_6px_0_0_#000] bg-purple-50 hover:bg-purple-100 transition-colors"
-              >
-                <div className="font-black text-black">{m.Title}</div>
-                <div className="text-sm font-semibold text-purple-700">{(m.Genre || []).join(", ")}</div>
-              </div>
-            ))}
-          </div>
+              ))}
+              {(!profile?.watched_movies || profile.watched_movies.length === 0) && (
+                <div className="col-span-2 p-4 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500 text-center">
+                  No watched movies yet
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

@@ -83,7 +83,7 @@ const Carousel_002 = ({
               }
             : false
         }
-        className="Carousal_002 h-[380px] w-[260px]"
+        className="Carousal_002 h-[460px] w-[300px]"
         modules={[EffectCards, Autoplay, Pagination, Navigation]}
       >
         {images.map((image, index) => (

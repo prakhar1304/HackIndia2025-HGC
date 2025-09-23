@@ -105,12 +105,12 @@ export default function MovieCard({
                   {movie.year}
                 </Badge>
               ) : null}
-              {recommendationData && (
+              {/* {recommendationData && (
                 <Badge className="bg-blue-600 text-white border-black/20 cursor-pointer">
                   <RotateCcw className="w-3 h-3 mr-1" />
                   Flip
                 </Badge>
-              )}
+              )} */}
             </div>
           </div>
           <CardHeader className="pb-2 pt-1">
