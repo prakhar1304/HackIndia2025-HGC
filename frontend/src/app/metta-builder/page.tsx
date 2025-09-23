@@ -27,7 +27,11 @@ export default function MeTTaBuilderPage() {
     variable_name: '$x',
     condition: { column: '', operator: '==', value: '' },
     true_action: '$x',
-    false_action: '()'
+    false_action: '()',
+    output_format: '("user" $c "is" , $x)',
+    column: '',
+    operator: '==',
+    value: ''
   })
   const [rules, setRules] = useState<MeTTaSession['rules']>([])
   const [addingRule, setAddingRule] = useState(false)
@@ -60,6 +64,19 @@ export default function MeTTaBuilderPage() {
     errors: string[];
     warnings: string[];
   } | null>(null)
+  
+  // Output Format Builder state
+  const [outputFormatBuilder, setOutputFormatBuilder] = useState<{
+    prefixText: string;
+    suffixText: string;
+    valuePrefixText: string;
+    valueSuffixText: string;
+  }>({
+    prefixText: 'user',
+    suffixText: 'is',
+    valuePrefixText: '',
+    valueSuffixText: ''
+  })
 
   // Load session on component mount
   useEffect(() => {
@@ -143,10 +160,48 @@ export default function MeTTaBuilderPage() {
   // Phase 4: Rule Templates
   const ruleTemplates = [
     {
-      id: 'find-user',
-      name: 'Find User',
-      description: 'Find users by name or ID',
+      id: 'find-detail',
+      name: 'Find Detail by ID',
+      description: 'Get all details for a specific user ID',
       icon: '👤',
+      rule: {
+        rule_type: 'findDetail' as const,
+        function_name: 'findDetail',
+        output_format: '("user" $c "is" , $x)'
+      }
+    },
+    {
+      id: 'find-by-condition',
+      name: 'Find IDs by Condition',
+      description: 'Find IDs where column value meets condition',
+      icon: '🔍',
+      rule: {
+        rule_type: 'findByCondition' as const,
+        function_name: 'findByCondition',
+        column: 'rating',
+        operator: '>' as const,
+        value: '6'
+      }
+    },
+    {
+      id: 'find-by-condition-full',
+      name: 'Find IDs by Condition (Full Details)',
+      description: 'Find IDs with condition and return full details',
+      icon: '📋',
+      rule: {
+        rule_type: 'findByConditionFull' as const,
+        function_name: 'findByConditionFull',
+        column: 'rating',
+        operator: '>' as const,
+        value: '6',
+        output_format: '("user" $c "is" , $value)'
+      }
+    },
+    {
+      id: 'find-user',
+      name: 'Find User (Match)',
+      description: 'Find users by name or ID using match pattern',
+      icon: '🎯',
       rule: {
         rule_type: 'match' as const,
         function_name: 'findUser',
@@ -183,48 +238,6 @@ export default function MeTTaBuilderPage() {
         true_action: '$x',
         false_action: '()'
       }
-    },
-    {
-      id: 'role-check',
-      name: 'Role Check',
-      description: 'Check user roles or permissions',
-      icon: '🔐',
-      rule: {
-        rule_type: 'match' as const,
-        function_name: 'hasRole',
-        variable_name: '$x',
-        condition: { column: 'role', operator: '==' as const, value: 'admin' },
-        true_action: '$x',
-        false_action: '()'
-      }
-    },
-    {
-      id: 'recommendation',
-      name: 'Recommendation',
-      description: 'Create recommendation rules',
-      icon: '⭐',
-      rule: {
-        rule_type: 'flexible' as const,
-        function_name: 'recommend',
-        parameter: 'genre',
-        condition: { column: 'genre', operator: '==' as const, value: 'Action' },
-        true_action: 'recommend($x)',
-        false_action: '()'
-      }
-    },
-    {
-      id: 'conditional-logic',
-      name: 'Conditional Logic',
-      description: 'Complex conditional statements',
-      icon: '🧠',
-      rule: {
-        rule_type: 'match' as const,
-        function_name: 'conditionalCheck',
-        variable_name: '$x',
-        condition: { column: 'score', operator: '>' as const, value: '80' },
-        true_action: 'highScore($x)',
-        false_action: 'lowScore($x)'
-      }
     }
   ]
 
@@ -240,33 +253,85 @@ export default function MeTTaBuilderPage() {
       errors.push('Function name must start with letter or underscore and contain only alphanumeric characters')
     }
 
-    // Check variable name for match rules
-    if (rule.rule_type === 'match' && (!rule.variable_name || rule.variable_name.trim() === '')) {
-      errors.push('Variable name is required for match rules')
-    } else if (rule.variable_name && !rule.variable_name.startsWith('$')) {
-      warnings.push('Variable names typically start with $ (e.g., $x, $user)')
-    }
+    // Validate based on rule type
+    switch (rule.rule_type) {
+      case 'findDetail':
+        if (!rule.output_format || rule.output_format.trim() === '') {
+          errors.push('Output format is required for findDetail rules')
+        }
+        break
 
-    // Check condition
-    if (!rule.condition.column) {
-      errors.push('Column selection is required')
-    }
-    if (!rule.condition.operator) {
-      errors.push('Operator selection is required')
-    }
-    if (rule.condition.value === '') {
-      errors.push('Value is required')
-    }
+      case 'findByCondition':
+        if (!rule.column) {
+          errors.push('Column selection is required')
+        }
+        if (!rule.operator) {
+          errors.push('Operator selection is required')
+        }
+        if (rule.value === '' || rule.value === undefined) {
+          errors.push('Value is required')
+        }
+        break
 
-    // Check actions
-    if (!rule.true_action || rule.true_action.trim() === '') {
-      errors.push('True action is required')
-    }
-    if (!rule.false_action || rule.false_action.trim() === '') {
-      errors.push('False action is required')
-    }
+      case 'findByConditionFull':
+        if (!rule.column) {
+          errors.push('Column selection is required')
+        }
+        if (!rule.operator) {
+          errors.push('Operator selection is required')
+        }
+        if (rule.value === '' || rule.value === undefined) {
+          errors.push('Value is required')
+        }
+        if (!rule.output_format || rule.output_format.trim() === '') {
+          errors.push('Output format is required for findByConditionFull rules')
+        }
+        break
 
-    // Check for common patterns - no longer warning about quotes since we handle clean values
+      case 'match':
+        if (!rule.variable_name || rule.variable_name.trim() === '') {
+          errors.push('Variable name is required for match rules')
+        } else if (!rule.variable_name.startsWith('$')) {
+          warnings.push('Variable names typically start with $ (e.g., $x, $user)')
+        }
+        if (!rule.condition?.column) {
+          errors.push('Column selection is required')
+        }
+        if (!rule.condition?.operator) {
+          errors.push('Operator selection is required')
+        }
+        if (rule.condition?.value === '') {
+          errors.push('Value is required')
+        }
+        if (!rule.true_action || rule.true_action.trim() === '') {
+          errors.push('True action is required')
+        }
+        if (!rule.false_action || rule.false_action.trim() === '') {
+          errors.push('False action is required')
+        }
+        break
+
+      case 'flexible':
+        if (!rule.condition?.column) {
+          errors.push('Column selection is required')
+        }
+        if (!rule.condition?.operator) {
+          errors.push('Operator selection is required')
+        }
+        if (rule.condition?.value === '') {
+          errors.push('Value is required')
+        }
+        if (!rule.true_action || rule.true_action.trim() === '') {
+          errors.push('True action is required')
+        }
+        if (!rule.false_action || rule.false_action.trim() === '') {
+          errors.push('False action is required')
+        }
+        break
+
+      default:
+        errors.push('Unknown rule type')
+    }
 
     return {
       isValid: errors.length === 0,
@@ -290,9 +355,24 @@ export default function MeTTaBuilderPage() {
     return `"${value}"`
   }
 
+  // Generate output format from builder
+  const generateOutputFormat = () => {
+    const { prefixText, suffixText, valuePrefixText, valueSuffixText } = outputFormatBuilder
+    const valueVariable = currentRule.rule_type === 'findByConditionFull' ? '$value' : '$x'
+    return `("${prefixText}" $c "${suffixText}" , ${valuePrefixText ? `"${valuePrefixText}" ` : ''}${valueVariable}${valueSuffixText ? ` "${valueSuffixText}"` : ''})`
+  }
+
+  // Update output format when builder changes
+  useEffect(() => {
+    if (currentRule.rule_type === 'findDetail' || currentRule.rule_type === 'findByConditionFull') {
+      const newFormat = generateOutputFormat()
+      setCurrentRule(prev => ({ ...prev, output_format: newFormat }))
+    }
+  }, [outputFormatBuilder, currentRule.rule_type])
+
   // Phase 2: Rule Builder functions
   const handleAddRule = async () => {
-    if (!sessionId || !currentRule.condition.column) return
+    if (!sessionId) return
     
     // Validate rule before adding
     const validation = validateRule(currentRule)
@@ -305,11 +385,49 @@ export default function MeTTaBuilderPage() {
     setError(null)
     
     try {
-      const result: MeTTaRuleResponse = await mettaAPI.addRule(sessionId, currentRule)
+      // Prepare rule data based on type
+      let ruleData: MeTTaRule = { ...currentRule }
+      
+      // For advanced templates, use the correct field structure
+      if (currentRule.rule_type === 'findDetail') {
+        ruleData = {
+          rule_type: 'findDetail',
+          function_name: currentRule.function_name,
+          output_format: currentRule.output_format
+        }
+      } else if (currentRule.rule_type === 'findByCondition') {
+        ruleData = {
+          rule_type: 'findByCondition',
+          function_name: currentRule.function_name,
+          column: currentRule.column,
+          operator: currentRule.operator,
+          value: formatValueForAPI(currentRule.value || '')
+        }
+      } else if (currentRule.rule_type === 'findByConditionFull') {
+        ruleData = {
+          rule_type: 'findByConditionFull',
+          function_name: currentRule.function_name,
+          column: currentRule.column,
+          operator: currentRule.operator,
+          value: formatValueForAPI(currentRule.value || ''),
+          output_format: currentRule.output_format
+        }
+      } else {
+        // For match and flexible rules, use the original structure
+        ruleData = {
+          ...currentRule,
+          condition: {
+            ...currentRule.condition!,
+            value: formatValueForAPI(currentRule.condition?.value || '')
+          }
+        }
+      }
+      
+      const result: MeTTaRuleResponse = await mettaAPI.addRule(sessionId, ruleData)
       
       const newRule = {
         id: result.rule_id,
-        ...currentRule,
+        ...ruleData,
         preview: result.preview
       }
       
@@ -327,7 +445,11 @@ export default function MeTTaBuilderPage() {
         variable_name: '$x',
         condition: { column: '', operator: '==', value: '' },
         true_action: '$x',
-        false_action: '()'
+        false_action: '()',
+        output_format: '("user" $c "is" , $x)',
+        column: '',
+        operator: '==',
+        value: ''
       })
       setSelectedTemplate(null)
       setRuleValidation(null)
@@ -344,6 +466,526 @@ export default function MeTTaBuilderPage() {
     setCurrentRule(updatedRule)
     const validation = validateRule(updatedRule)
     setRuleValidation(validation)
+  }
+
+  // Phase 4: Conditional form rendering based on rule type
+  const renderRuleForm = () => {
+    switch (currentRule.rule_type) {
+      case 'findDetail':
+        return (
+          <div className="space-y-6">
+            {/* Function Name */}
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-2">
+                Function Name
+              </label>
+              <Input
+                value={currentRule.function_name}
+                onChange={(e) => handleRuleChange({
+                  ...currentRule,
+                  function_name: e.target.value
+                })}
+                placeholder="e.g., findDetail"
+                className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+              />
+            </div>
+            
+            {/* Output Format Builder */}
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-2">
+                Output Format Builder
+              </label>
+              <div className="bg-gray-50 border-4 border-black rounded-lg p-4 shadow-[4px_4px_0_0_#000]">
+                <p className="text-sm font-bold text-gray-700 mb-3">
+                  Build your output format by adding text around the data:
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Column Name Format */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-2">
+                      Text around Column Name:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={outputFormatBuilder.prefixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, prefixText: e.target.value }))}
+                        placeholder="Before column"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                      <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded border border-blue-500 text-xs font-bold">
+                        Column Name
+                      </span>
+                      <Input
+                        value={outputFormatBuilder.suffixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, suffixText: e.target.value }))}
+                        placeholder="After column"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Value Format */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-2">
+                      Text around Value:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={outputFormatBuilder.valuePrefixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valuePrefixText: e.target.value }))}
+                        placeholder="Before value"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                      <span className="bg-green-200 text-green-800 px-2 py-1 rounded border border-green-500 text-xs font-bold">
+                        Value
+                      </span>
+                      <Input
+                        value={outputFormatBuilder.valueSuffixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valueSuffixText: e.target.value }))}
+                        placeholder="After value"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Live Preview */}
+                <div className="mt-4 p-3 bg-black rounded border-2 border-gray-600">
+                  <p className="text-xs text-gray-400 mb-1">Live Preview:</p>
+                  <code className="text-green-400 text-sm font-mono">
+                    {generateOutputFormat()}
+                  </code>
+                </div>
+                
+                <p className="text-xs text-gray-600 mt-2">
+                  💡 This will create outputs like: <strong>"user" Name "is" , "John"</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'findByCondition':
+        return (
+          <div className="space-y-6">
+            {/* Function Name */}
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-2">
+                Function Name
+              </label>
+              <Input
+                value={currentRule.function_name}
+                onChange={(e) => handleRuleChange({
+                  ...currentRule,
+                  function_name: e.target.value
+                })}
+                placeholder="e.g., findByCondition"
+                className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+              />
+            </div>
+            
+            {/* Column, Operator, Value */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Column
+                </label>
+                <Select
+                  value={currentRule.column || ''}
+                  onValueChange={(value) => handleRuleChange({
+                    ...currentRule,
+                    column: value
+                  })}
+                >
+                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
+                    <SelectValue placeholder="Select column..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {columns.map((column, index) => (
+                      <SelectItem key={index} value={column.name}>
+                        <div className="flex items-center gap-2">
+                          <span>{getColumnTypeIcon(column.type)}</span>
+                          <span className="font-bold">{column.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Operator
+                </label>
+                <Select
+                  value={currentRule.operator || '>'}
+                  onValueChange={(value: any) => handleRuleChange({
+                    ...currentRule,
+                    operator: value
+                  })}
+                >
+                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=">">&gt; (greater than)</SelectItem>
+                    <SelectItem value="<">&lt; (less than)</SelectItem>
+                    <SelectItem value=">=">&gt;= (greater or equal)</SelectItem>
+                    <SelectItem value="<=">&lt;= (less or equal)</SelectItem>
+                    <SelectItem value="==">== (equals)</SelectItem>
+                    <SelectItem value="!=">!= (not equals)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Value
+                </label>
+                <Input
+                  value={currentRule.value || ''}
+                  onChange={(e) => {
+                    let cleanValue = e.target.value
+                    if (cleanValue.startsWith('"') && cleanValue.endsWith('"') && cleanValue.length > 2) {
+                      cleanValue = cleanValue.slice(1, -1)
+                    }
+                    handleRuleChange({
+                      ...currentRule,
+                      value: cleanValue
+                    })
+                  }}
+                  placeholder="e.g., 6"
+                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+                />
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'findByConditionFull':
+        return (
+          <div className="space-y-6">
+            {/* Function Name */}
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-2">
+                Function Name
+              </label>
+              <Input
+                value={currentRule.function_name}
+                onChange={(e) => handleRuleChange({
+                  ...currentRule,
+                  function_name: e.target.value
+                })}
+                placeholder="e.g., findByConditionFull"
+                className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+              />
+            </div>
+            
+            {/* Column, Operator, Value */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Column
+                </label>
+                <Select
+                  value={currentRule.column || ''}
+                  onValueChange={(value) => handleRuleChange({
+                    ...currentRule,
+                    column: value
+                  })}
+                >
+                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
+                    <SelectValue placeholder="Select column..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {columns.map((column, index) => (
+                      <SelectItem key={index} value={column.name}>
+                        <div className="flex items-center gap-2">
+                          <span>{getColumnTypeIcon(column.type)}</span>
+                          <span className="font-bold">{column.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Operator
+                </label>
+                <Select
+                  value={currentRule.operator || '>'}
+                  onValueChange={(value: any) => handleRuleChange({
+                    ...currentRule,
+                    operator: value
+                  })}
+                >
+                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=">">&gt; (greater than)</SelectItem>
+                    <SelectItem value="<">&lt; (less than)</SelectItem>
+                    <SelectItem value=">=">&gt;= (greater or equal)</SelectItem>
+                    <SelectItem value="<=">&lt;= (less or equal)</SelectItem>
+                    <SelectItem value="==">== (equals)</SelectItem>
+                    <SelectItem value="!=">!= (not equals)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Value
+                </label>
+                <Input
+                  value={currentRule.value || ''}
+                  onChange={(e) => {
+                    let cleanValue = e.target.value
+                    if (cleanValue.startsWith('"') && cleanValue.endsWith('"') && cleanValue.length > 2) {
+                      cleanValue = cleanValue.slice(1, -1)
+                    }
+                    handleRuleChange({
+                      ...currentRule,
+                      value: cleanValue
+                    })
+                  }}
+                  placeholder="e.g., 6"
+                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+                />
+              </div>
+            </div>
+            
+            {/* Output Format Builder */}
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-2">
+                Output Format Builder
+              </label>
+              <div className="bg-gray-50 border-4 border-black rounded-lg p-4 shadow-[4px_4px_0_0_#000]">
+                <p className="text-sm font-bold text-gray-700 mb-3">
+                  Build your output format by adding text around the data:
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Column Name Format */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-2">
+                      Text around Column Name:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={outputFormatBuilder.prefixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, prefixText: e.target.value }))}
+                        placeholder="Before column"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                      <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded border border-blue-500 text-xs font-bold">
+                        Column Name
+                      </span>
+                      <Input
+                        value={outputFormatBuilder.suffixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, suffixText: e.target.value }))}
+                        placeholder="After column"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Value Format */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-2">
+                      Text around Value:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={outputFormatBuilder.valuePrefixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valuePrefixText: e.target.value }))}
+                        placeholder="Before value"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                      <span className="bg-green-200 text-green-800 px-2 py-1 rounded border border-green-500 text-xs font-bold">
+                        Value
+                      </span>
+                      <Input
+                        value={outputFormatBuilder.valueSuffixText}
+                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valueSuffixText: e.target.value }))}
+                        placeholder="After value"
+                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Live Preview */}
+                <div className="mt-4 p-3 bg-black rounded border-2 border-gray-600">
+                  <p className="text-xs text-gray-400 mb-1">Live Preview:</p>
+                  <code className="text-green-400 text-sm font-mono">
+                    {generateOutputFormat()}
+                  </code>
+                </div>
+                
+                <p className="text-xs text-gray-600 mt-2">
+                  💡 This will create outputs like: <strong>"user" Name "is" , "John"</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+
+      default:
+        // Original match/flexible form
+        return (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Function Name */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Function Name
+                </label>
+                <Input
+                  value={currentRule.function_name}
+                  onChange={(e) => handleRuleChange({
+                    ...currentRule,
+                    function_name: e.target.value
+                  })}
+                  placeholder="e.g., findUser"
+                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+                />
+              </div>
+
+              {/* Variable Name */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Variable Name
+                </label>
+                <Input
+                  value={currentRule.variable_name || ''}
+                  onChange={(e) => handleRuleChange({
+                    ...currentRule,
+                    variable_name: e.target.value
+                  })}
+                  placeholder="e.g., $x"
+                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+                />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Column */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Column
+                </label>
+                <Select
+                  value={currentRule.condition?.column || ''}
+                  onValueChange={(value) => handleRuleChange({
+                    ...currentRule,
+                    condition: { ...currentRule.condition!, column: value }
+                  })}
+                >
+                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
+                    <SelectValue placeholder="Select column..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {columns.map((column, index) => (
+                      <SelectItem key={index} value={column.name}>
+                        <div className="flex items-center gap-2">
+                          <span>{getColumnTypeIcon(column.type)}</span>
+                          <span className="font-bold">{column.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Operator */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Operator
+                </label>
+                <Select
+                  value={currentRule.condition?.operator || '=='}
+                  onValueChange={(value: any) => handleRuleChange({
+                    ...currentRule,
+                    condition: { ...currentRule.condition!, operator: value }
+                  })}
+                >
+                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="==">== (equals)</SelectItem>
+                    <SelectItem value="!=">!= (not equals)</SelectItem>
+                    <SelectItem value=">">&gt; (greater than)</SelectItem>
+                    <SelectItem value="<">&lt; (less than)</SelectItem>
+                    <SelectItem value=">=">&gt;= (greater or equal)</SelectItem>
+                    <SelectItem value="<=">&lt;= (less or equal)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Value */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  Value
+                </label>
+                <Input
+                  value={currentRule.condition?.value || ''}
+                  onChange={(e) => {
+                    let cleanValue = e.target.value
+                    if (cleanValue.startsWith('"') && cleanValue.endsWith('"') && cleanValue.length > 2) {
+                      cleanValue = cleanValue.slice(1, -1)
+                    }
+                    handleRuleChange({
+                      ...currentRule,
+                      condition: { ...currentRule.condition!, value: cleanValue }
+                    })
+                  }}
+                  placeholder='e.g., John or 25'
+                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+                />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* True Action */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  If TRUE, return
+                </label>
+                <Input
+                  value={currentRule.true_action || ''}
+                  onChange={(e) => handleRuleChange({
+                    ...currentRule,
+                    true_action: e.target.value
+                  })}
+                  placeholder="e.g., $x"
+                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+                />
+              </div>
+
+              {/* False Action */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">
+                  If FALSE, return
+                </label>
+                <Input
+                  value={currentRule.false_action || ''}
+                  onChange={(e) => handleRuleChange({
+                    ...currentRule,
+                    false_action: e.target.value
+                  })}
+                  placeholder="e.g., ()"
+                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
+                />
+              </div>
+            </div>
+          </div>
+        )
+    }
   }
 
   const handleRemoveRule = async (ruleId: string) => {
@@ -660,7 +1302,14 @@ export default function MeTTaBuilderPage() {
                            </div>
                          </div>
                          <div className="text-xs font-mono bg-black text-green-400 p-2 rounded border border-gray-600">
-                           {template.rule.function_name}({template.rule.condition.column} {template.rule.condition.operator} "{template.rule.condition.value}")
+                           {template.rule.rule_type === 'findDetail' 
+                             ? `${template.rule.function_name}($id) → ${template.rule.output_format}`
+                             : template.rule.rule_type === 'findByCondition'
+                             ? `${template.rule.function_name}($x) → ${template.rule.column} ${template.rule.operator} ${template.rule.value}`
+                             : template.rule.rule_type === 'findByConditionFull'
+                             ? `${template.rule.function_name}($x) → ${template.rule.column} ${template.rule.operator} ${template.rule.value} + details`
+                             : `${template.rule.function_name}(${template.rule.variable_name}) → ${template.rule.condition?.column} ${template.rule.condition?.operator} "${template.rule.condition?.value}"`
+                           }
                          </div>
                        </div>
                      ))}
@@ -717,157 +1366,13 @@ export default function MeTTaBuilderPage() {
                    </div>
                  )}
 
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                  {/* Function Name */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      Function Name
-                    </label>
-                     <Input
-                       value={currentRule.function_name}
-                       onChange={(e) => handleRuleChange({
-                         ...currentRule,
-                         function_name: e.target.value
-                       })}
-                       placeholder="e.g., findUser"
-                       className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                     />
-                  </div>
-
-                  {/* Variable Name */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      Variable Name
-                    </label>
-                     <Input
-                       value={currentRule.variable_name || ''}
-                       onChange={(e) => handleRuleChange({
-                         ...currentRule,
-                         variable_name: e.target.value
-                       })}
-                       placeholder="e.g., $x"
-                       className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                     />
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-6 mb-6">
-                  {/* Column */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      Column
-                    </label>
-                     <Select
-                       value={currentRule.condition.column}
-                       onValueChange={(value) => handleRuleChange({
-                         ...currentRule,
-                         condition: { ...currentRule.condition, column: value }
-                       })}
-                     >
-                      <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                        <SelectValue placeholder="Select column..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {columns.map((column, index) => (
-                          <SelectItem key={index} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span>{getColumnTypeIcon(column.type)}</span>
-                              <span className="font-bold">{column.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Operator */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      Operator
-                    </label>
-                     <Select
-                       value={currentRule.condition.operator}
-                       onValueChange={(value: any) => handleRuleChange({
-                         ...currentRule,
-                         condition: { ...currentRule.condition, operator: value }
-                       })}
-                     >
-                      <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="==">== (equals)</SelectItem>
-                        <SelectItem value="!=">!= (not equals)</SelectItem>
-                        <SelectItem value=">">&gt; (greater than)</SelectItem>
-                        <SelectItem value="<">&lt; (less than)</SelectItem>
-                        <SelectItem value=">=">&gt;= (greater or equal)</SelectItem>
-                        <SelectItem value="<=">&lt;= (less or equal)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Value */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      Value
-                    </label>
-                     <Input
-                       value={currentRule.condition.value}
-                       onChange={(e) => {
-                         let cleanValue = e.target.value
-                         // Remove extra quotes if they exist
-                         if (cleanValue.startsWith('"') && cleanValue.endsWith('"') && cleanValue.length > 2) {
-                           cleanValue = cleanValue.slice(1, -1)
-                         }
-                         handleRuleChange({
-                           ...currentRule,
-                           condition: { ...currentRule.condition, value: cleanValue }
-                         })
-                       }}
-                       placeholder='e.g., John or 25'
-                       className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                     />
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                  {/* True Action */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      If TRUE, return
-                    </label>
-                     <Input
-                       value={currentRule.true_action}
-                       onChange={(e) => handleRuleChange({
-                         ...currentRule,
-                         true_action: e.target.value
-                       })}
-                       placeholder="e.g., $x"
-                       className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                     />
-                  </div>
-
-                  {/* False Action */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      If FALSE, return
-                    </label>
-                     <Input
-                       value={currentRule.false_action}
-                       onChange={(e) => handleRuleChange({
-                         ...currentRule,
-                         false_action: e.target.value
-                       })}
-                       placeholder="e.g., ()"
-                       className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                     />
-                  </div>
-                </div>
+                {/* Conditional Form Rendering */}
+                {renderRuleForm()}
 
                  <Button
                    onClick={handleAddRule}
-                   disabled={addingRule || !currentRule.condition.column || (ruleValidation !== null && !ruleValidation.isValid)}
-                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black py-3 rounded-xl border-4 border-black shadow-[6px_6px_0_0_#000] hover:shadow-[8px_8px_0_0_#000] transition-all"
+                   disabled={addingRule || (ruleValidation !== null && !ruleValidation.isValid)}
+                   className="w-full mt-5 bg-purple-600 hover:bg-purple-700 text-white font-black py-3 rounded-xl border-4 border-black shadow-[6px_6px_0_0_#000] hover:shadow-[8px_8px_0_0_#000] transition-all"
                  >
                   {addingRule ? (
                     <>
@@ -900,8 +1405,18 @@ export default function MeTTaBuilderPage() {
                               <span className="bg-purple-200 text-purple-800 px-2 py-1 rounded border border-purple-500 text-sm font-bold">
                                 {rule.function_name}
                               </span>
+                              <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded border border-blue-500 text-xs font-bold">
+                                {rule.rule_type}
+                              </span>
                               <span className="text-sm font-semibold text-gray-600">
-                                {rule.condition.column} {rule.condition.operator} "{rule.condition.value}"
+                                {rule.rule_type === 'findDetail' 
+                                  ? `Get details by ID`
+                                  : rule.rule_type === 'findByCondition'
+                                  ? `${rule.column} ${rule.operator} ${rule.value}`
+                                  : rule.rule_type === 'findByConditionFull'
+                                  ? `${rule.column} ${rule.operator} ${rule.value} + details`
+                                  : `${rule.condition?.column} ${rule.condition?.operator} "${rule.condition?.value}"`
+                                }
                               </span>
                             </div>
                             <div className="bg-black text-green-400 p-3 rounded border-2 border-gray-600 font-mono text-sm">
@@ -1044,22 +1559,48 @@ export default function MeTTaBuilderPage() {
 
               {/* Query Examples */}
               <div className="mb-6">
-                <p className="text-sm font-bold text-gray-700 mb-2">💡 Try these example queries:</p>
-                <div className="grid md:grid-cols-2 gap-2">
-                  {[
-                    '!(findUser $x)',
-                    '!(match &self (Name $x $y) ($x $y))',
-                    '!(canVote Julia)',
-                    '!(processNumber 5)'
-                  ].map((example, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setQuery(example)}
-                      className="text-left p-2 bg-white border-2 border-gray-400 rounded hover:border-black hover:shadow-[2px_2px_0_0_#000] transition-all text-sm font-mono"
-                    >
-                      {example}
-                    </button>
-                  ))}
+                <p className="text-sm font-bold text-gray-700 mb-3">💡 Try these example queries:</p>
+                
+                {/* Advanced Function Examples */}
+                <div className="mb-4">
+                  <p className="text-sm font-bold text-blue-700 mb-2">🚀 New Advanced Functions:</p>
+                  <div className="grid md:grid-cols-3 gap-2">
+                    {[
+                      { query: '!(findDetail 1)', desc: 'Get all details for user ID 1' },
+                      { query: '!(findByCondition Rating)', desc: 'Find IDs where rating > 6' },
+                      { query: '!(findByConditionFull Rating)', desc: 'Get full details for high ratings' }
+                    ].map((example, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setQuery(example.query)}
+                        className="text-left p-3 bg-blue-50 border-2 border-blue-400 rounded hover:border-blue-600 hover:shadow-[2px_2px_0_0_#000] transition-all text-sm"
+                      >
+                        <div className="font-mono text-blue-800 font-bold mb-1">{example.query}</div>
+                        <div className="text-xs text-blue-600">{example.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Traditional Function Examples */}
+                <div>
+                  <p className="text-sm font-bold text-gray-700 mb-2">📝 Traditional Functions:</p>
+                  <div className="grid md:grid-cols-2 gap-2">
+                    {[
+                      '!(findUser $x)',
+                      '!(match &self (Name $x $y) ($x $y))',
+                      '!(canVote Julia)',
+                      '!(processNumber 5)'
+                    ].map((example, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setQuery(example)}
+                        className="text-left p-2 bg-white border-2 border-gray-400 rounded hover:border-black hover:shadow-[2px_2px_0_0_#000] transition-all text-sm font-mono"
+                      >
+                        {example}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

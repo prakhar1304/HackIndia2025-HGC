@@ -15,18 +15,23 @@ export interface MeTTaSession {
   idColumn: string;
   rules: Array<{
     id: string;
-    rule_type: 'match' | 'flexible';
+    rule_type: 'match' | 'flexible' | 'findDetail' | 'findByCondition' | 'findByConditionFull';
     function_name: string;
     variable_name?: string;
     parameter?: string;
-    condition: {
+    condition?: {
       column: string;
       operator: '==' | '!=' | '>' | '<' | '>=' | '<=';
       value: string | number;
     };
-    true_action: string;
-    false_action: string;
+    true_action?: string;
+    false_action?: string;
     preview: string;
+    // New fields for advanced templates
+    output_format?: string;
+    column?: string;
+    operator?: '==' | '!=' | '>' | '<' | '>=' | '<=';
+    value?: string | number;
   }>;
   timestamp: number;
 }
