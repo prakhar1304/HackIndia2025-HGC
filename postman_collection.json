@@ -1,0 +1,393 @@
+{
+  "info": {
+    "name": "MeTTa Rule Builder API",
+    "description": "Complete API collection for testing MeTTa Rule Builder Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ruleId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CSV Upload",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "csv",
+              "type": "file",
+              "src": "test.csv",
+              "description": "Upload CSV file"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/upload-csv",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "upload-csv"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    if (response.success) {",
+              "        pm.collectionVariables.set('sessionId', response.session_id);",
+              "        console.log('Session ID set:', response.session_id);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Set ID Column",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"id_column\": \"Id\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/set-id-column",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "set-id-column"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Match Rule",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"rule\": {\n    \"rule_type\": \"match\",\n    \"function_name\": \"findUser\",\n    \"variable_name\": \"$x\",\n    \"condition\": {\n      \"column\": \"Name\",\n      \"operator\": \"==\",\n      \"value\": \"George\"\n    },\n    \"true_action\": \"$x\",\n    \"false_action\": \"()\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/add-rule",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "add-rule"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    if (response.success) {",
+              "        pm.collectionVariables.set('ruleId', response.rule_id);",
+              "        console.log('Rule ID set:', response.rule_id);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add Flexible Rule",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"rule\": {\n    \"rule_type\": \"flexible\",\n    \"function_name\": \"canVote\",\n    \"parameter\": \"$person\",\n    \"condition\": {\n      \"column\": \"Age\",\n      \"operator\": \">\",\n      \"value\": 18\n    },\n    \"true_action\": \"\\\"Yes\\\"\",\n    \"false_action\": \"\\\"No\\\"\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/add-rule",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "add-rule"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Math Rule",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"rule\": {\n    \"rule_type\": \"flexible\",\n    \"function_name\": \"processNumber\",\n    \"parameter\": \"$x\",\n    \"condition\": {\n      \"column\": \"Age\",\n      \"operator\": \">=\",\n      \"value\": 0\n    },\n    \"true_action\": \"(+ $x 10)\",\n    \"false_action\": \"(* $x -1)\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/add-rule",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "add-rule"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Rules",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/rules/{{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "rules", "{{sessionId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Remove Rule",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"rule_id\": \"{{ruleId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/remove-rule",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "remove-rule"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Generate MeTTa File",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/generate-metta",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "generate-metta"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get MeTTa Preview",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/metta-preview/{{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "metta-preview", "{{sessionId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Execute Query - Find User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"query\": \"!(findUser $x)\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/execute-query",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "execute-query"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Execute Query - Can Vote",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"query\": \"!(canVote Julia)\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/execute-query",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "execute-query"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Execute Query - Process Number",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"query\": \"!(processNumber 5)\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/execute-query",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "execute-query"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Execute Query - Match Pattern",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\",\n  \"query\": \"!(match &self (Name $x $y) ($x $y))\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/execute-query",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "execute-query"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Download MeTTa File",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/download-metta/{{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "download-metta", "{{sessionId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Print to Terminal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{sessionId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/print-terminal",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "print-terminal"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set default session ID if not set",
+          "if (!pm.collectionVariables.get('sessionId')) {",
+          "    pm.collectionVariables.set('sessionId', 'test-session-123');",
+          "}"
+        ]
+      }
+    }
+  ]
+}

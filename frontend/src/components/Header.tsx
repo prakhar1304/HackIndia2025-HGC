@@ -39,7 +39,7 @@ export default function Header() {
             <SheetContent side="left">
               <nav className="flex flex-col gap-3">
                 <Link href="/home">Home</Link>
-                <Link href="/search">Search</Link>
+                <Link href="/innovation">Our Innovation</Link>
               </nav>
             </SheetContent>
           </Sheet>
@@ -72,8 +72,8 @@ export default function Header() {
           <Link href="/home" className="hover:underline">
             Home
           </Link>
-          <Link href="/search" className="hover:underline">
-            Search
+          <Link href="/innovation" className="hover:underline">
+            Our Innovation
           </Link>
           {!userId ? (
             <Link href="/onboarding" className="inline-flex items-center gap-2 rounded-md border-2 px-3 py-1.5 shadow-[4px_4px_0_0_#000]">Start</Link>
