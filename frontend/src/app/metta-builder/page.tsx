@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card } from "@/components/ui/card"
-import { Upload, FileText, ArrowRight, CheckCircle, AlertCircle, Loader2, Plus, Trash2, Code, Eye } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { mettaAPI, type MeTTaColumn, type MeTTaUploadResponse, type MeTTaRule, type MeTTaRuleResponse } from "@/services/metta"
 import { mettaSession, type MeTTaSession } from "@/services/mettaSession"
+import { UploadStep, AddRuleStep, LoadingStep, PreviewStep } from "@/components/metta-builder"
+import { useRouter } from 'next/navigation'
 
 export default function MeTTaBuilderPage() {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
+  const [showLoading, setShowLoading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<MeTTaUploadResponse | null>(null)
@@ -78,20 +79,23 @@ export default function MeTTaBuilderPage() {
     valueSuffixText: ''
   })
 
+  // Navigation handler for stacking
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+      setShowLoading(false)
+      setError(null)
+    } else {
+      router.push('/innovation')
+    }
+  }
+
   // Load session on component mount
   useEffect(() => {
     // Always start from step 1 for a fresh experience
     setCurrentStep(1)
-    console.log('🆕 Starting fresh MeTTa session from step 1')
+    console.log('Starting fresh MeTTa session from step 1')
   }, [])
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      setFile(selectedFile)
-      setError(null)
-    }
-  }
 
   const handleUpload = async () => {
     if (!file) return
@@ -143,103 +147,6 @@ export default function MeTTaBuilderPage() {
       setError(err instanceof Error ? err.message : 'Failed to set ID column')
     }
   }
-
-  const getColumnTypeIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'string':
-        return '📝'
-      case 'number':
-        return '🔢'
-      case 'date':
-        return '📅'
-      default:
-        return '📊'
-    }
-  }
-
-  // Phase 4: Rule Templates
-  const ruleTemplates = [
-    {
-      id: 'find-detail',
-      name: 'Find Detail by ID',
-      description: 'Get all details for a specific user ID',
-      icon: '👤',
-      rule: {
-        rule_type: 'findDetail' as const,
-        function_name: 'findDetail',
-        output_format: '("user" $c "is" , $x)'
-      }
-    },
-    {
-      id: 'find-by-condition',
-      name: 'Find IDs by Condition',
-      description: 'Find IDs where column value meets condition',
-      icon: '🔍',
-      rule: {
-        rule_type: 'findByCondition' as const,
-        function_name: 'findByCondition',
-        column: 'rating',
-        operator: '>' as const,
-        value: '6'
-      }
-    },
-    {
-      id: 'find-by-condition-full',
-      name: 'Find IDs by Condition (Full Details)',
-      description: 'Find IDs with condition and return full details',
-      icon: '📋',
-      rule: {
-        rule_type: 'findByConditionFull' as const,
-        function_name: 'findByConditionFull',
-        column: 'rating',
-        operator: '>' as const,
-        value: '6',
-        output_format: '("user" $c "is" , $value)'
-      }
-    },
-    {
-      id: 'find-user',
-      name: 'Find User (Match)',
-      description: 'Find users by name or ID using match pattern',
-      icon: '🎯',
-      rule: {
-        rule_type: 'match' as const,
-        function_name: 'findUser',
-        variable_name: '$x',
-        condition: { column: 'name', operator: '==' as const, value: 'John' },
-        true_action: '$x',
-        false_action: '()'
-      }
-    },
-    {
-      id: 'filter-age',
-      name: 'Age Filter',
-      description: 'Filter users by age range',
-      icon: '🎂',
-      rule: {
-        rule_type: 'match' as const,
-        function_name: 'findAdults',
-        variable_name: '$x',
-        condition: { column: 'age', operator: '>=' as const, value: '18' },
-        true_action: '$x',
-        false_action: '()'
-      }
-    },
-    {
-      id: 'location-based',
-      name: 'Location Based',
-      description: 'Find users by city or country',
-      icon: '🌍',
-      rule: {
-        rule_type: 'match' as const,
-        function_name: 'findByLocation',
-        variable_name: '$x',
-        condition: { column: 'city', operator: '==' as const, value: 'New York' },
-        true_action: '$x',
-        false_action: '()'
-      }
-    }
-  ]
 
   // Phase 4: Rule validation
   const validateRule = (rule: MeTTaRule) => {
@@ -338,13 +245,6 @@ export default function MeTTaBuilderPage() {
       errors,
       warnings
     }
-  }
-
-  // Phase 4: Apply template
-  const applyTemplate = (template: typeof ruleTemplates[0]) => {
-    setCurrentRule(template.rule)
-    setSelectedTemplate(template.id)
-    setRuleValidation(validateRule(template.rule))
   }
 
   // Helper function to format value for API (add quotes for strings)
@@ -468,526 +368,6 @@ export default function MeTTaBuilderPage() {
     setRuleValidation(validation)
   }
 
-  // Phase 4: Conditional form rendering based on rule type
-  const renderRuleForm = () => {
-    switch (currentRule.rule_type) {
-      case 'findDetail':
-        return (
-          <div className="space-y-6">
-            {/* Function Name */}
-            <div>
-              <label className="block text-sm font-bold text-gray-800 mb-2">
-                Function Name
-              </label>
-              <Input
-                value={currentRule.function_name}
-                onChange={(e) => handleRuleChange({
-                  ...currentRule,
-                  function_name: e.target.value
-                })}
-                placeholder="e.g., findDetail"
-                className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-              />
-            </div>
-            
-            {/* Output Format Builder */}
-            <div>
-              <label className="block text-sm font-bold text-gray-800 mb-2">
-                Output Format Builder
-              </label>
-              <div className="bg-gray-50 border-4 border-black rounded-lg p-4 shadow-[4px_4px_0_0_#000]">
-                <p className="text-sm font-bold text-gray-700 mb-3">
-                  Build your output format by adding text around the data:
-                </p>
-                
-                <div className="space-y-4">
-                  {/* Column Name Format */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-2">
-                      Text around Column Name:
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={outputFormatBuilder.prefixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, prefixText: e.target.value }))}
-                        placeholder="Before column"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                      <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded border border-blue-500 text-xs font-bold">
-                        Column Name
-                      </span>
-                      <Input
-                        value={outputFormatBuilder.suffixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, suffixText: e.target.value }))}
-                        placeholder="After column"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Value Format */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-2">
-                      Text around Value:
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={outputFormatBuilder.valuePrefixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valuePrefixText: e.target.value }))}
-                        placeholder="Before value"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                      <span className="bg-green-200 text-green-800 px-2 py-1 rounded border border-green-500 text-xs font-bold">
-                        Value
-                      </span>
-                      <Input
-                        value={outputFormatBuilder.valueSuffixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valueSuffixText: e.target.value }))}
-                        placeholder="After value"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Live Preview */}
-                <div className="mt-4 p-3 bg-black rounded border-2 border-gray-600">
-                  <p className="text-xs text-gray-400 mb-1">Live Preview:</p>
-                  <code className="text-green-400 text-sm font-mono">
-                    {generateOutputFormat()}
-                  </code>
-                </div>
-                
-                <p className="text-xs text-gray-600 mt-2">
-                  💡 This will create outputs like: <strong>"user" Name "is" , "John"</strong>
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-
-      case 'findByCondition':
-        return (
-          <div className="space-y-6">
-            {/* Function Name */}
-            <div>
-              <label className="block text-sm font-bold text-gray-800 mb-2">
-                Function Name
-              </label>
-              <Input
-                value={currentRule.function_name}
-                onChange={(e) => handleRuleChange({
-                  ...currentRule,
-                  function_name: e.target.value
-                })}
-                placeholder="e.g., findByCondition"
-                className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-              />
-            </div>
-            
-            {/* Column, Operator, Value */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Column
-                </label>
-                <Select
-                  value={currentRule.column || ''}
-                  onValueChange={(value) => handleRuleChange({
-                    ...currentRule,
-                    column: value
-                  })}
-                >
-                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                    <SelectValue placeholder="Select column..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {columns.map((column, index) => (
-                      <SelectItem key={index} value={column.name}>
-                        <div className="flex items-center gap-2">
-                          <span>{getColumnTypeIcon(column.type)}</span>
-                          <span className="font-bold">{column.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Operator
-                </label>
-                <Select
-                  value={currentRule.operator || '>'}
-                  onValueChange={(value: any) => handleRuleChange({
-                    ...currentRule,
-                    operator: value
-                  })}
-                >
-                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value=">">&gt; (greater than)</SelectItem>
-                    <SelectItem value="<">&lt; (less than)</SelectItem>
-                    <SelectItem value=">=">&gt;= (greater or equal)</SelectItem>
-                    <SelectItem value="<=">&lt;= (less or equal)</SelectItem>
-                    <SelectItem value="==">== (equals)</SelectItem>
-                    <SelectItem value="!=">!= (not equals)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Value
-                </label>
-                <Input
-                  value={currentRule.value || ''}
-                  onChange={(e) => {
-                    let cleanValue = e.target.value
-                    if (cleanValue.startsWith('"') && cleanValue.endsWith('"') && cleanValue.length > 2) {
-                      cleanValue = cleanValue.slice(1, -1)
-                    }
-                    handleRuleChange({
-                      ...currentRule,
-                      value: cleanValue
-                    })
-                  }}
-                  placeholder="e.g., 6"
-                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                />
-              </div>
-            </div>
-          </div>
-        )
-
-      case 'findByConditionFull':
-        return (
-          <div className="space-y-6">
-            {/* Function Name */}
-            <div>
-              <label className="block text-sm font-bold text-gray-800 mb-2">
-                Function Name
-              </label>
-              <Input
-                value={currentRule.function_name}
-                onChange={(e) => handleRuleChange({
-                  ...currentRule,
-                  function_name: e.target.value
-                })}
-                placeholder="e.g., findByConditionFull"
-                className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-              />
-            </div>
-            
-            {/* Column, Operator, Value */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Column
-                </label>
-                <Select
-                  value={currentRule.column || ''}
-                  onValueChange={(value) => handleRuleChange({
-                    ...currentRule,
-                    column: value
-                  })}
-                >
-                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                    <SelectValue placeholder="Select column..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {columns.map((column, index) => (
-                      <SelectItem key={index} value={column.name}>
-                        <div className="flex items-center gap-2">
-                          <span>{getColumnTypeIcon(column.type)}</span>
-                          <span className="font-bold">{column.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Operator
-                </label>
-                <Select
-                  value={currentRule.operator || '>'}
-                  onValueChange={(value: any) => handleRuleChange({
-                    ...currentRule,
-                    operator: value
-                  })}
-                >
-                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value=">">&gt; (greater than)</SelectItem>
-                    <SelectItem value="<">&lt; (less than)</SelectItem>
-                    <SelectItem value=">=">&gt;= (greater or equal)</SelectItem>
-                    <SelectItem value="<=">&lt;= (less or equal)</SelectItem>
-                    <SelectItem value="==">== (equals)</SelectItem>
-                    <SelectItem value="!=">!= (not equals)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Value
-                </label>
-                <Input
-                  value={currentRule.value || ''}
-                  onChange={(e) => {
-                    let cleanValue = e.target.value
-                    if (cleanValue.startsWith('"') && cleanValue.endsWith('"') && cleanValue.length > 2) {
-                      cleanValue = cleanValue.slice(1, -1)
-                    }
-                    handleRuleChange({
-                      ...currentRule,
-                      value: cleanValue
-                    })
-                  }}
-                  placeholder="e.g., 6"
-                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                />
-              </div>
-            </div>
-            
-            {/* Output Format Builder */}
-            <div>
-              <label className="block text-sm font-bold text-gray-800 mb-2">
-                Output Format Builder
-              </label>
-              <div className="bg-gray-50 border-4 border-black rounded-lg p-4 shadow-[4px_4px_0_0_#000]">
-                <p className="text-sm font-bold text-gray-700 mb-3">
-                  Build your output format by adding text around the data:
-                </p>
-                
-                <div className="space-y-4">
-                  {/* Column Name Format */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-2">
-                      Text around Column Name:
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={outputFormatBuilder.prefixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, prefixText: e.target.value }))}
-                        placeholder="Before column"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                      <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded border border-blue-500 text-xs font-bold">
-                        Column Name
-                      </span>
-                      <Input
-                        value={outputFormatBuilder.suffixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, suffixText: e.target.value }))}
-                        placeholder="After column"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Value Format */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-2">
-                      Text around Value:
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={outputFormatBuilder.valuePrefixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valuePrefixText: e.target.value }))}
-                        placeholder="Before value"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                      <span className="bg-green-200 text-green-800 px-2 py-1 rounded border border-green-500 text-xs font-bold">
-                        Value
-                      </span>
-                      <Input
-                        value={outputFormatBuilder.valueSuffixText}
-                        onChange={(e) => setOutputFormatBuilder(prev => ({ ...prev, valueSuffixText: e.target.value }))}
-                        placeholder="After value"
-                        className="border-2 border-gray-400 shadow-[2px_2px_0_0_#000] text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Live Preview */}
-                <div className="mt-4 p-3 bg-black rounded border-2 border-gray-600">
-                  <p className="text-xs text-gray-400 mb-1">Live Preview:</p>
-                  <code className="text-green-400 text-sm font-mono">
-                    {generateOutputFormat()}
-                  </code>
-                </div>
-                
-                <p className="text-xs text-gray-600 mt-2">
-                  💡 This will create outputs like: <strong>"user" Name "is" , "John"</strong>
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-
-      default:
-        // Original match/flexible form
-        return (
-          <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Function Name */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Function Name
-                </label>
-                <Input
-                  value={currentRule.function_name}
-                  onChange={(e) => handleRuleChange({
-                    ...currentRule,
-                    function_name: e.target.value
-                  })}
-                  placeholder="e.g., findUser"
-                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                />
-              </div>
-
-              {/* Variable Name */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Variable Name
-                </label>
-                <Input
-                  value={currentRule.variable_name || ''}
-                  onChange={(e) => handleRuleChange({
-                    ...currentRule,
-                    variable_name: e.target.value
-                  })}
-                  placeholder="e.g., $x"
-                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Column */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Column
-                </label>
-                <Select
-                  value={currentRule.condition?.column || ''}
-                  onValueChange={(value) => handleRuleChange({
-                    ...currentRule,
-                    condition: { ...currentRule.condition!, column: value }
-                  })}
-                >
-                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                    <SelectValue placeholder="Select column..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {columns.map((column, index) => (
-                      <SelectItem key={index} value={column.name}>
-                        <div className="flex items-center gap-2">
-                          <span>{getColumnTypeIcon(column.type)}</span>
-                          <span className="font-bold">{column.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Operator */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Operator
-                </label>
-                <Select
-                  value={currentRule.condition?.operator || '=='}
-                  onValueChange={(value: any) => handleRuleChange({
-                    ...currentRule,
-                    condition: { ...currentRule.condition!, operator: value }
-                  })}
-                >
-                  <SelectTrigger className="border-4 border-black shadow-[4px_4px_0_0_#000]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="==">== (equals)</SelectItem>
-                    <SelectItem value="!=">!= (not equals)</SelectItem>
-                    <SelectItem value=">">&gt; (greater than)</SelectItem>
-                    <SelectItem value="<">&lt; (less than)</SelectItem>
-                    <SelectItem value=">=">&gt;= (greater or equal)</SelectItem>
-                    <SelectItem value="<=">&lt;= (less or equal)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Value */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Value
-                </label>
-                <Input
-                  value={currentRule.condition?.value || ''}
-                  onChange={(e) => {
-                    let cleanValue = e.target.value
-                    if (cleanValue.startsWith('"') && cleanValue.endsWith('"') && cleanValue.length > 2) {
-                      cleanValue = cleanValue.slice(1, -1)
-                    }
-                    handleRuleChange({
-                      ...currentRule,
-                      condition: { ...currentRule.condition!, value: cleanValue }
-                    })
-                  }}
-                  placeholder='e.g., John or 25'
-                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* True Action */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  If TRUE, return
-                </label>
-                <Input
-                  value={currentRule.true_action || ''}
-                  onChange={(e) => handleRuleChange({
-                    ...currentRule,
-                    true_action: e.target.value
-                  })}
-                  placeholder="e.g., $x"
-                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                />
-              </div>
-
-              {/* False Action */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  If FALSE, return
-                </label>
-                <Input
-                  value={currentRule.false_action || ''}
-                  onChange={(e) => handleRuleChange({
-                    ...currentRule,
-                    false_action: e.target.value
-                  })}
-                  placeholder="e.g., ()"
-                  className="border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000]"
-                />
-              </div>
-            </div>
-          </div>
-        )
-    }
-  }
-
   const handleRemoveRule = async (ruleId: string) => {
     if (!sessionId) return
     
@@ -1009,15 +389,23 @@ export default function MeTTaBuilderPage() {
   const handleGenerateMeTTa = async () => {
     if (!sessionId) return
     
-    setLoadingMeTTa(true)
+    setShowLoading(true)
     setError(null)
+  }
+
+  const handleLoadingComplete = async () => {
+    if (!sessionId) return
+
+    setLoadingMeTTa(true)
     
     try {
       const result = await mettaAPI.generateMeTTa(sessionId)
       setMettaData(result)
-      setCurrentStep(3)
+      setShowLoading(false)
+      setCurrentStep(4) // Now step 4 is the preview
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate MeTTa file')
+      setShowLoading(false)
     } finally {
       setLoadingMeTTa(false)
     }
@@ -1063,629 +451,127 @@ export default function MeTTaBuilderPage() {
 
   return (
     <main className="min-h-screen bg-white py-10">
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-thin {
+          scrollbar-width: thin;
+        }
+        .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+          background-color: #4B5563;
+          border-radius: 4px;
+        }
+        .scrollbar-track-gray-800::-webkit-scrollbar-track {
+          background-color: #1F2937;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 8px;
+        }
+      `}</style>
       <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-black text-black mb-4">
-            MeTTa Rule Builder
-          </h1>
-          <p className="text-xl font-bold text-gray-700">
-            Transform your data into intelligent recommendations
-          </p>
+        {/* Header with Back Button */}
+        <div className="flex items-center mb-8">
+          <Button
+            onClick={handleBack}
+            variant="outline"
+            className="mr-4 border-2 border-black shadow-[3px_3px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] transition-all"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <div className="flex-1 text-center">
+            <h1 className="text-4xl md:text-5xl font-black text-black mb-4">
+              MeTTa Rule Builder
+            </h1>
+            <p className="text-xl font-bold text-gray-700">
+              Transform your data into intelligent recommendations
+            </p>
+          </div>
         </div>
 
         {/* Progress Steps */}
-        <div className="mb-12">
-          <div className="flex items-center justify-center gap-4">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex items-center">
-                <div className={`
-                  w-12 h-12 rounded-full border-4 border-black shadow-[6px_6px_0_0_#000] flex items-center justify-center font-black text-lg
-                  ${currentStep >= step 
-                    ? 'bg-purple-500 text-white' 
-                    : 'bg-white text-gray-500'
-                  }
-                `}>
-                  {step}
-                </div>
-                {step < 4 && (
-                  <div className={`w-16 h-1 mx-2 ${currentStep > step ? 'bg-purple-500' : 'bg-gray-300'}`} />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-center gap-16 mt-4 text-sm font-bold">
-            <span className={currentStep >= 1 ? 'text-purple-700' : 'text-gray-500'}>Upload CSV</span>
-            <span className={currentStep >= 2 ? 'text-purple-700' : 'text-gray-500'}>Configure</span>
-            <span className={currentStep >= 3 ? 'text-purple-700' : 'text-gray-500'}>Build Rules</span>
-            <span className={currentStep >= 4 ? 'text-purple-700' : 'text-gray-500'}>Generate</span>
-          </div>
-        </div>
-
-        {/* Step 1: CSV Upload */}
-        {currentStep === 1 && (
-          <div className="max-w-4xl mx-auto">
-            <Card className="p-8 border-4 border-black shadow-[12px_12px_0_0_#000] bg-gradient-to-br from-blue-50 to-purple-50">
-              <div className="text-center">
-                <h2 className="text-3xl font-black text-black mb-6">Step 1: Upload Your CSV</h2>
-                
-                {/* File Upload Area */}
-                <div className="mb-8">
-                  <div className="border-4 border-dashed border-black rounded-2xl p-12 bg-white shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-all">
-                    <div className="text-center">
-                      <Upload className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-                      <h3 className="text-xl font-black text-black mb-2">Choose your CSV file</h3>
-                      <p className="text-gray-600 mb-6">Drag and drop or click to browse</p>
-                      
-                      <Input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                        className="mb-4"
-                      />
-                      
-                      {file && (
-                        <div className="bg-green-100 border-2 border-green-500 rounded-lg p-4 mb-4">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-green-700" />
-                            <span className="font-bold text-green-800">{file.name}</span>
-                            <span className="text-sm text-green-600">
-                              ({(file.size / 1024).toFixed(1)} KB)
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <Button
-                        onClick={handleUpload}
-                        disabled={!file || uploading}
-                        className="bg-purple-600 hover:bg-purple-700 text-white font-black px-8 py-3 rounded-xl border-4 border-black shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-all"
-                      >
-                        {uploading ? (
-                          <>
-                            <Loader2 className="mr-2 w-5 h-5 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="mr-2 w-5 h-5" />
-                            Upload CSV
-                          </>
-                        )}
-                      </Button>
-                    </div>
+        {!showLoading && (
+          <div className="mb-12">
+            <div className="flex items-center justify-center gap-4">
+              {[1, 2, 3, 4].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div className={`
+                    w-12 h-12 rounded-full border-4 border-black shadow-[6px_6px_0_0_#000] flex items-center justify-center font-black text-lg
+                    ${currentStep >= step 
+                      ? 'bg-purple-500 text-white' 
+                      : 'bg-white text-gray-500'
+                    }
+                  `}>
+                    {step}
                   </div>
-                </div>
-
-                {/* Upload Results */}
-                {uploadResult && (
-                  <div className="bg-white rounded-2xl border-4 border-black shadow-[8px_8px_0_0_#000] p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <CheckCircle className="w-6 h-6 text-green-600" />
-                      <h3 className="text-xl font-black text-green-800">Upload Successful!</h3>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-6 mb-6">
-                      <div className="bg-purple-100 border-2 border-purple-500 rounded-lg p-4">
-                        <h4 className="font-black text-purple-800 mb-2">📊 File Stats</h4>
-                        <p className="text-sm font-semibold text-purple-700">
-                          Rows: <span className="font-black">{uploadResult.total_rows}</span>
-                        </p>
-                        <p className="text-sm font-semibold text-purple-700">
-                          Columns: <span className="font-black">{uploadResult.columns.length}</span>
-                        </p>
-                      </div>
-                      
-                      <div className="bg-green-100 border-2 border-green-500 rounded-lg p-4">
-                        <h4 className="font-black text-green-800 mb-2">🔑 Session ID</h4>
-                        <p className="text-xs font-mono text-green-700 break-all">
-                          {uploadResult.session_id}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Columns Preview */}
-                    <div className="mb-6">
-                      <h4 className="font-black text-black mb-4">📋 Detected Columns</h4>
-                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {uploadResult.columns.map((column, index) => (
-                          <div key={index} className="bg-gray-100 border-2 border-gray-400 rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-lg">{getColumnTypeIcon(column.type)}</span>
-                              <span className="font-black text-gray-800">{column.name}</span>
-                              <span className="text-xs bg-gray-300 px-2 py-1 rounded border border-gray-500">
-                                {column.type}
-                              </span>
-                            </div>
-                            {column.sample_values.length > 0 && (
-                              <p className="text-xs text-gray-600">
-                                Sample: {column.sample_values.slice(0, 3).join(', ')}
-                                {column.sample_values.length > 3 && '...'}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* ID Column Selection */}
-                    <div className="mb-6">
-                      <h4 className="font-black text-black mb-4">🎯 Select ID Column</h4>
-                      <div className="flex gap-4 items-center">
-                        <Select value={selectedIdColumn} onValueChange={setSelectedIdColumn}>
-                          <SelectTrigger className="flex-1 border-4 border-black shadow-[4px_4px_0_0_#000]">
-                            <SelectValue placeholder="Choose your ID column..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {uploadResult.columns.map((column, index) => (
-                              <SelectItem key={index} value={column.name}>
-                                <div className="flex items-center gap-2">
-                                  <span>{getColumnTypeIcon(column.type)}</span>
-                                  <span className="font-bold">{column.name}</span>
-                                  <span className="text-xs text-gray-500">({column.type})</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <Button
-                          onClick={handleSetIdColumn}
-                          disabled={!selectedIdColumn}
-                          className="bg-green-600 hover:bg-green-700 text-white font-black px-6 py-3 rounded-xl border-4 border-black shadow-[6px_6px_0_0_#000] hover:shadow-[8px_8px_0_0_#000] transition-all"
-                        >
-                          <ArrowRight className="mr-2 w-5 h-5" />
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Error Display */}
-                {error && (
-                  <div className="bg-red-100 border-4 border-red-500 rounded-lg p-4 mt-6">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5 text-red-700" />
-                      <span className="font-bold text-red-800">{error}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Step 2: Rule Builder */}
-        {currentStep === 2 && (
-          <div className="max-w-6xl mx-auto">
-            <Card className="p-8 border-4 border-black shadow-[12px_12px_0_0_#000] bg-gradient-to-br from-green-50 to-purple-50">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-black text-black mb-4">Step 2: Build Your Rules</h2>
-                <p className="text-lg font-bold text-gray-700">
-                  Create intelligent matching rules using your data columns
-                </p>
-              </div>
-
-               {/* Phase 4: Rule Templates */}
-               <div className="bg-white rounded-2xl border-4 border-black shadow-[8px_8px_0_0_#000] p-6 mb-8">
-                 <div className="flex items-center justify-between mb-6">
-                   <h3 className="text-xl font-black text-black flex items-center gap-2">
-                     <Code className="w-6 h-6" />
-                     Rule Templates
-                   </h3>
-                   <Button
-                     onClick={() => setShowRuleTemplates(!showRuleTemplates)}
-                     className="bg-blue-600 hover:bg-blue-700 text-white font-black px-4 py-2 rounded-lg border-2 border-black shadow-[4px_4px_0_0_#000] hover:shadow-[6px_6px_0_0_#000] transition-all"
-                   >
-                     {showRuleTemplates ? 'Hide' : 'Show'} Templates
-                   </Button>
-                 </div>
-
-                 {showRuleTemplates && (
-                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                     {ruleTemplates.map((template) => (
-                       <div
-                         key={template.id}
-                         onClick={() => applyTemplate(template)}
-                         className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:scale-105 ${
-                           selectedTemplate === template.id
-                             ? 'border-purple-500 bg-purple-50 shadow-[4px_4px_0_0_#000]'
-                             : 'border-gray-400 bg-gray-50 hover:border-black hover:shadow-[2px_2px_0_0_#000]'
-                         }`}
-                       >
-                         <div className="flex items-center gap-3 mb-2">
-                           <span className="text-2xl">{template.icon}</span>
-                           <div>
-                             <h4 className="font-black text-black">{template.name}</h4>
-                             <p className="text-sm text-gray-600">{template.description}</p>
-                           </div>
-                         </div>
-                         <div className="text-xs font-mono bg-black text-green-400 p-2 rounded border border-gray-600">
-                           {template.rule.rule_type === 'findDetail' 
-                             ? `${template.rule.function_name}($id) → ${template.rule.output_format}`
-                             : template.rule.rule_type === 'findByCondition'
-                             ? `${template.rule.function_name}($x) → ${template.rule.column} ${template.rule.operator} ${template.rule.value}`
-                             : template.rule.rule_type === 'findByConditionFull'
-                             ? `${template.rule.function_name}($x) → ${template.rule.column} ${template.rule.operator} ${template.rule.value} + details`
-                             : `${template.rule.function_name}(${template.rule.variable_name}) → ${template.rule.condition?.column} ${template.rule.condition?.operator} "${template.rule.condition?.value}"`
-                           }
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-               </div>
-
-               {/* Rule Builder Form */}
-               <div className="bg-white rounded-2xl border-4 border-black shadow-[8px_8px_0_0_#000] p-6 mb-8">
-                 <h3 className="text-xl font-black text-black mb-6 flex items-center gap-2">
-                   <Plus className="w-6 h-6" />
-                   Add New Rule
-                 </h3>
-
-                 {/* Phase 4: Validation Feedback */}
-                 {ruleValidation && (
-                   <div className={`mb-6 p-4 rounded-lg border-2 ${
-                     ruleValidation.isValid 
-                       ? 'bg-green-50 border-green-500' 
-                       : 'bg-red-50 border-red-500'
-                   }`}>
-                     <div className="flex items-center gap-2 mb-2">
-                       {ruleValidation.isValid ? (
-                         <CheckCircle className="w-5 h-5 text-green-600" />
-                       ) : (
-                         <AlertCircle className="w-5 h-5 text-red-600" />
-                       )}
-                       <span className={`font-bold ${
-                         ruleValidation.isValid ? 'text-green-800' : 'text-red-800'
-                       }`}>
-                         {ruleValidation.isValid ? 'Rule is valid' : 'Rule has errors'}
-                       </span>
-                     </div>
-                     {ruleValidation.errors.length > 0 && (
-                       <div className="mb-2">
-                         <p className="text-sm font-bold text-red-700 mb-1">Errors:</p>
-                         <ul className="text-sm text-red-600 list-disc list-inside">
-                           {ruleValidation.errors.map((error, index) => (
-                             <li key={index}>{error}</li>
-                           ))}
-                         </ul>
-                       </div>
-                     )}
-                     {ruleValidation.warnings.length > 0 && (
-                       <div>
-                         <p className="text-sm font-bold text-yellow-700 mb-1">Warnings:</p>
-                         <ul className="text-sm text-yellow-600 list-disc list-inside">
-                           {ruleValidation.warnings.map((warning, index) => (
-                             <li key={index}>{warning}</li>
-                           ))}
-                         </ul>
-                       </div>
-                     )}
-                   </div>
-                 )}
-
-                {/* Conditional Form Rendering */}
-                {renderRuleForm()}
-
-                 <Button
-                   onClick={handleAddRule}
-                   disabled={addingRule || (ruleValidation !== null && !ruleValidation.isValid)}
-                   className="w-full mt-5 bg-purple-600 hover:bg-purple-700 text-white font-black py-3 rounded-xl border-4 border-black shadow-[6px_6px_0_0_#000] hover:shadow-[8px_8px_0_0_#000] transition-all"
-                 >
-                  {addingRule ? (
-                    <>
-                      <Loader2 className="mr-2 w-5 h-5 animate-spin" />
-                      Adding Rule...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 w-5 h-5" />
-                      Add Rule
-                    </>
+                  {step < 4 && (
+                    <div className={`w-16 h-1 mx-2 ${currentStep > step ? 'bg-purple-500' : 'bg-gray-300'}`} />
                   )}
-                </Button>
-              </div>
-
-              {/* Current Rules */}
-              {rules.length > 0 && (
-                <div className="bg-white rounded-2xl border-4 border-black shadow-[8px_8px_0_0_#000] p-6 mb-8">
-                  <h3 className="text-xl font-black text-black mb-6 flex items-center gap-2">
-                    <Code className="w-6 h-6" />
-                    Current Rules ({rules.length})
-                  </h3>
-
-                  <div className="space-y-4">
-                    {rules.map((rule, index) => (
-                      <div key={rule.id} className="bg-gray-50 border-2 border-gray-400 rounded-lg p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="bg-purple-200 text-purple-800 px-2 py-1 rounded border border-purple-500 text-sm font-bold">
-                                {rule.function_name}
-                              </span>
-                              <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded border border-blue-500 text-xs font-bold">
-                                {rule.rule_type}
-                              </span>
-                              <span className="text-sm font-semibold text-gray-600">
-                                {rule.rule_type === 'findDetail' 
-                                  ? `Get details by ID`
-                                  : rule.rule_type === 'findByCondition'
-                                  ? `${rule.column} ${rule.operator} ${rule.value}`
-                                  : rule.rule_type === 'findByConditionFull'
-                                  ? `${rule.column} ${rule.operator} ${rule.value} + details`
-                                  : `${rule.condition?.column} ${rule.condition?.operator} "${rule.condition?.value}"`
-                                }
-                              </span>
-                            </div>
-                            <div className="bg-black text-green-400 p-3 rounded border-2 border-gray-600 font-mono text-sm">
-                              <pre className="whitespace-pre-wrap">{rule.preview}</pre>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={() => handleRemoveRule(rule.id)}
-                            className="ml-4 bg-red-600 hover:bg-red-700 text-white border-2 border-black shadow-[3px_3px_0_0_#000] hover:shadow-[4px_4px_0_0_#000]"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              )}
-
-              {/* Generate Button */}
-              <div className="text-center">
-                <Button
-                  onClick={handleGenerateMeTTa}
-                  disabled={rules.length === 0 || loadingMeTTa}
-                  className="bg-green-600 hover:bg-green-700 text-white font-black px-8 py-4 rounded-xl border-4 border-black shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-all transform hover:scale-105"
-                >
-                  {loadingMeTTa ? (
-                    <>
-                      <Loader2 className="mr-2 w-5 h-5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="mr-2 w-5 h-5" />
-                      Generate MeTTa File
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Error Display */}
-              {error && (
-                <div className="bg-red-100 border-4 border-red-500 rounded-lg p-4 mt-6">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-700" />
-                    <span className="font-bold text-red-800">{error}</span>
-                  </div>
-                </div>
-              )}
-            </Card>
+              ))}
+            </div>
+            <div className="flex justify-center gap-16 mt-4 text-sm font-bold">
+              <span className={currentStep >= 1 ? 'text-purple-700' : 'text-gray-500'}>Upload CSV</span>
+              <span className={currentStep >= 2 ? 'text-purple-700' : 'text-gray-500'}>Add Rules</span>
+              <span className={currentStep >= 3 ? 'text-purple-700' : 'text-gray-500'}>Generate</span>
+              <span className={currentStep >= 4 ? 'text-purple-700' : 'text-gray-500'}>Preview</span>
+            </div>
           </div>
         )}
 
-        {/* Step 3: MeTTa Preview & Download */}
-        {currentStep === 3 && mettaData && (
-          <div className="max-w-6xl mx-auto space-y-8">
-            {/* Success Header */}
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 rounded-full px-6 py-3 border-4 border-green-600 shadow-[6px_6px_0_0_#000] mb-6">
-                <CheckCircle className="w-6 h-6" />
-                <span className="text-lg font-black">MeTTa File Generated Successfully!</span>
-              </div>
-              <h2 className="text-3xl font-black text-black mb-4">Step 3: MeTTa Preview & Download</h2>
-            </div>
-
-            {/* File Stats */}
-            <Card className="p-6 border-4 border-black shadow-[8px_8px_0_0_#000] bg-gradient-to-br from-blue-50 to-purple-50">
-              <h3 className="text-xl font-black text-black mb-4 flex items-center gap-2">
-                📊 File Statistics
-              </h3>
-              <div className="grid md:grid-cols-4 gap-4">
-                <div className="bg-white border-2 border-gray-400 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-black text-purple-700">{mettaData.lines_count}</div>
-                  <div className="text-sm font-bold text-gray-600">Lines</div>
-                </div>
-                <div className="bg-white border-2 border-gray-400 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-black text-green-700">{mettaData.facts_count}</div>
-                  <div className="text-sm font-bold text-gray-600">Facts</div>
-                </div>
-                <div className="bg-white border-2 border-gray-400 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-black text-blue-700">{mettaData.rules_count}</div>
-                  <div className="text-sm font-bold text-gray-600">Rules</div>
-                </div>
-                <div className="bg-white border-2 border-gray-400 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-black text-orange-700">{(mettaData.file_size / 1024).toFixed(1)}</div>
-                  <div className="text-sm font-bold text-gray-600">KB Size</div>
-                </div>
-              </div>
-            </Card>
-
-            {/* MeTTa Content Preview */}
-            <Card className="p-6 border-4 border-black shadow-[8px_8px_0_0_#000] bg-gradient-to-br from-gray-50 to-black">
-              <h3 className="text-xl font-black text-black mb-4 flex items-center gap-2">
-                <Code className="w-6 h-6" />
-                Generated MeTTa File Preview
-              </h3>
-              <div className="bg-black border-4 border-gray-600 rounded-lg p-4 max-h-96 overflow-y-auto">
-                <pre className="text-green-400 font-mono text-sm whitespace-pre-wrap leading-relaxed">
-                  {mettaData.metta_content}
-                </pre>
-              </div>
-            </Card>
-
-            {/* Query Execution */}
-            <Card className="p-6 border-4 border-black shadow-[8px_8px_0_0_#000] bg-gradient-to-br from-yellow-50 to-orange-50">
-              <h3 className="text-xl font-black text-black mb-4 flex items-center gap-2">
-                🧪 Test Your MeTTa Rules
-              </h3>
-              
-              <div className="mb-6">
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  MeTTa Query
-                </label>
-                <div className="flex gap-4">
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Enter MeTTa query... (e.g., !(findUser $x))"
-                    className="flex-1 border-4 border-black shadow-[4px_4px_0_0_#000] focus:shadow-[6px_6px_0_0_#000] font-mono"
-                  />
-                  <Button
-                    onClick={handleExecuteQuery}
-                    disabled={executingQuery || !query.trim()}
-                    className="bg-orange-600 hover:bg-orange-700 text-white font-black px-6 py-3 rounded-xl border-4 border-black shadow-[6px_6px_0_0_#000] hover:shadow-[8px_8px_0_0_#000] transition-all"
-                  >
-                    {executingQuery ? (
-                      <>
-                        <Loader2 className="mr-2 w-5 h-5 animate-spin" />
-                        Executing...
-                      </>
-                    ) : (
-                      <>
-                        <Code className="mr-2 w-5 h-5" />
-                        Execute
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Query Examples */}
-              <div className="mb-6">
-                <p className="text-sm font-bold text-gray-700 mb-3">💡 Try these example queries:</p>
-                
-                {/* Advanced Function Examples */}
-                <div className="mb-4">
-                  <p className="text-sm font-bold text-blue-700 mb-2">🚀 New Advanced Functions:</p>
-                  <div className="grid md:grid-cols-3 gap-2">
-                    {[
-                      { query: '!(findDetail 1)', desc: 'Get all details for user ID 1' },
-                      { query: '!(findByCondition Rating)', desc: 'Find IDs where rating > 6' },
-                      { query: '!(findByConditionFull Rating)', desc: 'Get full details for high ratings' }
-                    ].map((example, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setQuery(example.query)}
-                        className="text-left p-3 bg-blue-50 border-2 border-blue-400 rounded hover:border-blue-600 hover:shadow-[2px_2px_0_0_#000] transition-all text-sm"
-                      >
-                        <div className="font-mono text-blue-800 font-bold mb-1">{example.query}</div>
-                        <div className="text-xs text-blue-600">{example.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Traditional Function Examples */}
-                <div>
-                  <p className="text-sm font-bold text-gray-700 mb-2">📝 Traditional Functions:</p>
-                  <div className="grid md:grid-cols-2 gap-2">
-                    {[
-                      '!(findUser $x)',
-                      '!(match &self (Name $x $y) ($x $y))',
-                      '!(canVote Julia)',
-                      '!(processNumber 5)'
-                    ].map((example, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setQuery(example)}
-                        className="text-left p-2 bg-white border-2 border-gray-400 rounded hover:border-black hover:shadow-[2px_2px_0_0_#000] transition-all text-sm font-mono"
-                      >
-                        {example}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Query Results */}
-              {queryResult && (
-                <div className="bg-green-100 border-4 border-green-500 rounded-lg p-4">
-                  <h4 className="font-black text-green-800 mb-3">🎯 Query Results</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-green-700">Query:</span>
-                      <code className="bg-white px-2 py-1 rounded border border-green-400 text-sm font-mono">
-                        {queryResult.query}
-                      </code>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-green-700">Results:</span>
-                      <span className="text-green-800 font-semibold">
-                        {queryResult.results.length > 0 
-                          ? queryResult.results.join(', ') 
-                          : 'No results found'
-                        }
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-green-700">Execution Time:</span>
-                      <span className="text-green-800 font-semibold">{queryResult.execution_time}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                onClick={handleDownloadMeTTa}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-black px-8 py-4 rounded-xl border-4 border-black shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-all transform hover:scale-105"
-              >
-                <Upload className="mr-2 w-5 h-5" />
-                Download .metta File
-              </Button>
-              
-              <Button
-                onClick={handlePrintTerminal}
-                disabled={printingTerminal}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-black px-8 py-4 rounded-xl border-4 border-black shadow-[8px_8px_0_0_#000] hover:shadow-[12px_12px_0_0_#000] transition-all transform hover:scale-105"
-              >
-                {printingTerminal ? (
-                  <>
-                    <Loader2 className="mr-2 w-5 h-5 animate-spin" />
-                    Printing...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="mr-2 w-5 h-5" />
-                    Print to Terminal
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Success Message */}
-            <div className="text-center">
-              <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-4 border-purple-500 rounded-2xl p-6 shadow-[8px_8px_0_0_#000]">
-                <h3 className="text-2xl font-black text-purple-800 mb-2">🎉 Congratulations!</h3>
-                <p className="text-lg font-bold text-purple-700">
-                  You've successfully created your MeTTa knowledge base with {mettaData.rules_count} rules and {mettaData.facts_count} facts!
-                </p>
-                <p className="text-purple-600 mt-2">
-                  Your file is ready to use in any MeTTa environment.
-                </p>
-              </div>
-            </div>
-
-            {/* Error Display */}
-            {error && (
-              <div className="bg-red-100 border-4 border-red-500 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-700" />
-                  <span className="font-bold text-red-800">{error}</span>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Step Components */}
+        {showLoading && (
+          <LoadingStep onComplete={handleLoadingComplete} />
         )}
+
+        {!showLoading && currentStep === 1 && (
+          <UploadStep
+            file={file}
+            setFile={setFile}
+            uploading={uploading}
+            uploadResult={uploadResult}
+            selectedIdColumn={selectedIdColumn}
+            setSelectedIdColumn={setSelectedIdColumn}
+            error={error}
+            onUpload={handleUpload}
+            onSetIdColumn={handleSetIdColumn}
+          />
+        )}
+
+        {!showLoading && currentStep === 2 && (
+          <AddRuleStep
+            columns={columns}
+            currentRule={currentRule}
+            setCurrentRule={setCurrentRule}
+            rules={rules}
+            addingRule={addingRule}
+            error={error}
+            onAddRule={handleAddRule}
+            onRemoveRule={handleRemoveRule}
+            onGenerateMeTTa={handleGenerateMeTTa}
+            loadingMeTTa={loadingMeTTa}
+            ruleValidation={ruleValidation}
+            onRuleChange={handleRuleChange}
+            outputFormatBuilder={outputFormatBuilder}
+            setOutputFormatBuilder={setOutputFormatBuilder}
+            generateOutputFormat={generateOutputFormat}
+          />
+        )}
+
+        {!showLoading && currentStep === 4 && mettaData && (
+          <PreviewStep
+            mettaData={mettaData}
+            query={query}
+            setQuery={setQuery}
+            queryResult={queryResult}
+            executingQuery={executingQuery}
+            printingTerminal={printingTerminal}
+            error={error}
+            onExecuteQuery={handleExecuteQuery}
+            onDownloadMeTTa={handleDownloadMeTTa}
+            onPrintTerminal={handlePrintTerminal}
+          />
+        )}
+
       </div>
     </main>
   )

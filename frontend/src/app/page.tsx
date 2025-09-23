@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import SearchModal from "@/components/SearchModal"
+import MovieCursorTrail from "@/components/MovieCursorTrail"
+import PageLoader from "@/components/PageLoader"
 import { Search, Star, Users, Clock, Zap, Target, BookOpen, Brain, Layers } from "lucide-react"
 
 function FeatureCard({
@@ -36,6 +38,7 @@ export default function HomePage() {
   const { userId } = useLocalAuth()
   const [inputUserId, setInputUserId] = useState("")
   const [showSearchModal, setShowSearchModal] = useState(false)
+  const [loadingDone, setLoadingDone] = useState(false)
   const router = useRouter()
 
   
@@ -44,14 +47,12 @@ export default function HomePage() {
     setShowSearchModal(true)
   }
 
-  if (userId) {
-    router.push("/home")
-    return null
-  }
+
 
   return (
-    <>
-      <main className="min-h-screen bg-white">
+    <div className="relative">
+      {/* Real website underneath */}
+      <main className={`min-h-screen bg-white transition-opacity duration-500 ${loadingDone ? 'opacity-100' : 'opacity-50'}`}>
         {/* Hero Section */}
         <section className="min-h-screen flex items-center justify-center px-6 bg-gradient-to-br from-purple-50 to-white relative overflow-hidden">
           <div className="absolute top-20 left-10 w-16 h-16 bg-purple-400 rounded-full border-4 border-black shadow-[8px_8px_0_0_#000] animate-bounce" />
@@ -64,9 +65,15 @@ export default function HomePage() {
                 Smarter Movie Picks,{" "}
                 <span className="text-purple-600 animate-bounce inline-block">Backed by Reason</span>
               </h1>
-              <p className="text-xl md:text-2xl font-bold text-gray-700 mb-8 max-w-3xl mx-auto text-pretty">
+              <p className="text-xl md:text-2xl font-bold text-gray-700 mb-8 max-w-3xl  mx-auto text-pretty">
                 Content, Collaboration & Context — all in one{" "}
-                <span className="whitespace-nowrap bg-purple-200 px-2 py-1 rounded border-2 border-black">MeTTa powered engine</span>.
+
+                <div className="mt-6">
+  <span className="whitespace-nowrap bg-purple-200 px-2 py-1 rounded border-2 border-black">
+    MeTTa powered engine
+  </span>
+</div>
+                {/* <span className="whitespace-nowrap mt-10 bg-purple-200 px-2 py-1 rounded border-2 border-black">MeTTa powered engine</span>. */}
               </p>
             </div>
 
@@ -299,9 +306,17 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Movie Cursor Trail Section */}
+        <MovieCursorTrail />
       </main>
 
       <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
-    </>
+
+      {/* Loader on top until loading is done */}
+      {!loadingDone && (
+        <PageLoader onComplete={() => setLoadingDone(true)} />
+      )}
+    </div>
   )
 }

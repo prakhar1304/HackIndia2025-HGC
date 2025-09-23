@@ -28,12 +28,12 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-white/90 backdrop-blur dark:bg-black/50">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-1">
+        <div className="flex items-center gap-2">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="md:hidden">
-                <MenuIcon className="size-4" />
+                <MenuIcon className="size-3" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
@@ -44,42 +44,42 @@ export default function Header() {
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="flex items-center font-extrabold text-lg md:text-xl tracking-wide">
-            <LottieBox src="/animation/MovieTheatre.json" className="mr-2 size-20 border-0 p-0 shadow-none bg-transparent" />
+          <Link href="/" className="flex items-center font-extrabold text-base md:text-lg tracking-wide">
+            <LottieBox src="/animation/MovieTheatre.json" className="mr-2 size-16 border-0 p-0 shadow-none bg-transparent" />
             <span>Metta Match</span>
           </Link>
         </div>
 
-        <Separator orientation="vertical" className="hidden md:block h-6" />
+        <Separator orientation="vertical" className="hidden md:block h-4" />
 
         <form
           onSubmit={onSearchSubmit}
-          className="ml-auto flex w-full max-w-xl items-center gap-2 rounded-lg border bg-white p-2 shadow-sm dark:bg-black/30"
+          className="ml-auto flex w-full max-w-xl items-center gap-2 rounded-lg border bg-white p-1.5 shadow-sm dark:bg-black/30"
         >
           <Input
             placeholder="Search movies..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="h-10 flex-1 border-0 focus-visible:ring-0"
+            className="h-7 flex-1 border-0 focus-visible:ring-0"
           />
-          <Button type="submit" className="h-10">
-            <SearchIcon className="mr-2 size-4" />
+          <Button type="submit" className="h-8 text-sm">
+            <SearchIcon className="mr-1 size-3" />
             Search
           </Button>
         </form>
 
-        <nav className="hidden md:flex items-center gap-4 ml-4">
-          <Link href="/home" className="hover:underline">
+        <nav className="hidden md:flex items-center gap-3 ml-3">
+          <Link href="/home" className="hover:underline text-sm">
             Home
           </Link>
-          <Link href="/innovation" className="hover:underline">
+          <Link href="/innovation" className="hover:underline text-sm">
             Our Innovation
           </Link>
           {!userId ? (
-            <Link href="/onboarding" className="inline-flex items-center gap-2 rounded-md border-2 px-3 py-1.5 shadow-[4px_4px_0_0_#000]">Start</Link>
+            <Link href="/onboarding" className="inline-flex items-center gap-1 rounded-md border-2 px-3 py-1 text-sm shadow-[3px_3px_0_0_#000]">Start</Link>
           ) : (
-            <Link href="/profile" className="inline-flex items-center gap-2 rounded-md border-2 px-3 py-1.5 shadow-[4px_4px_0_0_#000]">
-              <User2 className="size-4" />
+            <Link href="/profile" className="inline-flex items-center gap-1 rounded-md border-2 px-3 py-1 text-sm shadow-[3px_3px_0_0_#000]">
+              <User2 className="size-3" />
               <span className="font-semibold">{userId}</span>
             </Link>
           )}
