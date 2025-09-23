@@ -41,3 +41,52 @@
 !(add-atom &users (liked pinky m_tt0162866))
 !(add-atom &users (liked pinky m_tt0081506))
 
+
+; User: bob - Added on 2025-09-22 19:16:48.809042
+!(add-atom &users (user bob))
+!(add-atom &users (fav-genre bob "Drama"))
+!(add-atom &users (fav-genre bob "Comedy"))
+!(add-atom &users (fav-genre bob "Sci-Fi"))
+!(add-atom &users (language bob "English"))
+!(add-atom &users (language bob "Hindi"))
+!(add-atom &users (country bob "United States"))
+!(add-atom &users (country bob "India"))
+!(add-atom &users (liked bob m_tt0060009))
+!(add-atom &users (liked bob m_tt0222850))
+!(add-atom &users (liked bob m_tt1885032))
+
+
+; User: bob - Added on 2025-09-23 01:27:04.168116
+!(add-atom &users (user bob))
+!(add-atom &users (watched bob m_tt0032138))
+
+
+; User: bob - Added on 2025-09-23 01:27:06.765881
+!(add-atom &users (user bob))
+!(add-atom &users (watched bob m_tt1465522))
+
+
+; User: bob - Added on 2025-09-23 01:27:08.095812
+!(add-atom &users (user bob))
+!(add-atom &users (watched bob m_tt0795176))
+
+
+; User: bob - Added on 2025-09-23 01:27:09.382859
+!(add-atom &users (user bob))
+!(add-atom &users (watched bob m_tt5491994))
+
+
+; User: bob - Added on 2025-09-23 01:27:10.924127
+!(add-atom &users (user bob))
+!(add-atom &users (watched bob m_tt0245165))
+
+
+; User: bob - Added on 2025-09-23 01:27:18.557105
+!(add-atom &users (user bob))
+!(add-atom &users (watched bob m_tt21262240))
+
+
+; User: bob - Added on 2025-09-23 01:27:20.158500
+!(add-atom &users (user bob))
+!(add-atom &users (watched bob m_tt9612516))
+

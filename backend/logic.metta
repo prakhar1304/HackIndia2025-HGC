@@ -364,3 +364,5 @@
 (= (collaborative-search $u)
     (let $x  (get-movies-from-other-users-check $u) (not-watched $u $x)) 
 )
+
+!(collaborative-search pinky)
