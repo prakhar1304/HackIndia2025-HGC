@@ -6,25 +6,31 @@ import { heroSlides, movies as allMovies } from "@/lib/dummy"
 import { useEffect, useMemo, useState } from "react"
 import { getCollabRecommendations } from "@/services/local/recommendations"
 import { useLocalAuth } from "@/context/LocalAuthContext"
+import { useRecommendationsCache } from "@/hooks/useRecommendationsCache"
+import { useCollaborativeSearchCache } from "@/hooks/useCollaborativeSearchCache"
+import { useIndiaMoviesCache } from "@/hooks/useIndiaMoviesCache"
 import { getTopRated, getByGenre } from "@/services/ngrok/movies"
 import { recommendBySeedMovie, recommendForUser } from "@/services/ngrok/recommendations"
 import { patchLocalUser } from "@/services/local/users"
 import { likeNgrok, addToHistoryNgrok, unlikeNgrok } from "@/services/ngrok/users"
 import ImprovedHorizontalScroll from "@/components/HorizontalScroll"
-import { getByCountryLocal } from "@/services/local/movies"
 
 export default function HomePage() {
   const { userId } = useLocalAuth()
   const [feedback, setFeedback] = useState<Record<string, boolean>>({})
   const [history, setHistory] = useState<string[]>([])
-  const [recs, setRecs] = useState<any[]>([])
+  
+  // Use cache hooks for MeTTa APIs
+  const { recommendations: recs, loading: recsLoading, isFromCache: recsFromCache } = useRecommendationsCache(userId || 'bob')
+  const { recommendations: collaborativeRecs, loading: collabLoading, isFromCache: collabFromCache } = useCollaborativeSearchCache(userId || 'bob')
+  const { movies: india, loading: indiaLoading, isFromCache: indiaFromCache } = useIndiaMoviesCache()
+  
   const [topRated, setTopRated] = useState<any[]>([])
   const [action, setAction] = useState<any[]>([])
   const [seedMovie, setSeedMovie] = useState<any[]>([])
   const [userRecs, setUserRecs] = useState<any[]>([])
   const [comedy, setComedy] = useState<any[]>([])
   const [thriller, setThriller] = useState<any[]>([])
-  const [india, setIndia] = useState<any[]>([])
 
   const isImdb = (value: string) => /^tt\d+$/i.test(value)
 
@@ -69,19 +75,16 @@ export default function HomePage() {
       try {
         console.log('�� Loading MeTTa APIs sequentially...')
         
-        // Load MeTTa APIs one by one
-        const recommendations = await getCollabRecommendations(userId || 'bob')
-        setRecs(recommendations)
+        // MeTTa APIs are now handled by cache hooks
         
-        const countryMovies = await getByCountryLocal()
-        setIndia(countryMovies)
+        // India movies now handled by cache hook
         
         console.log('✅ MeTTa APIs loaded successfully')
         
       } catch (error) {
         console.error('❌ Error loading MeTTa APIs:', error)
-        setRecs([])
-        setIndia([])
+        // setRecs([]) - handled by cache hooks
+        // setIndia([]) - handled by cache hook
       }
     }
 
@@ -110,14 +113,13 @@ export default function HomePage() {
           .catch(() => setUserRecs([]))
     }
 
-    // Execute both loading strategies
-    loadMeTTaAPIs()
+    // Execute loading strategy
     loadNonMeTTaAPIs()
   }, [userId])
 
   const movieRows = [
     {
-      title: "TasteMatrix",
+      title: "TasteMatrix" + (recsFromCache ? " (cached)" : ""),
       data: recs,
       bgColor: "bg-gradient-to-r from-green-50 to-green-100",
       titleColor: "text-green-800",
@@ -125,6 +127,16 @@ export default function HomePage() {
       reason: "collab" as const,
       metta: true,
       accent: "green" as const,
+    },
+    {
+      title: "Community Picks" + (collabFromCache ? " (cached)" : ""),
+      data: collaborativeRecs,
+      bgColor: "bg-gradient-to-r from-teal-50 to-teal-100",
+      titleColor: "text-teal-800",
+      borderColor: "border-teal-300",
+      reason: "collaborative" as const,
+      metta: true,
+      accent: "teal" as const,
     },
     {
       title: "Because you watched Asterix & Obelix",
@@ -136,7 +148,7 @@ export default function HomePage() {
       accent: "purple" as const,
     },
     {
-      title: "India Picks",
+      title: "India Picks" + (indiaFromCache ? " (cached)" : ""),
       data: india,
       bgColor: "bg-gradient-to-r from-emerald-50 to-emerald-100",
       titleColor: "text-emerald-800",
@@ -213,11 +225,12 @@ export default function HomePage() {
           <ImprovedHorizontalScroll>
             {row.data.map((item) => {
               const movie = item.movie || item
-              // Extract recommendation data if available (for TasteMatrix row)
-              const recommendationData = row.reason === "collab" && item.match_score ? {
+              // Extract recommendation data if available
+              const recommendationData = item.match_score ? {
                 match_score: item.match_score,
                 reason: item.reason,
-                key_matches: item.key_matches
+                key_matches: item.key_matches,
+                collaborative_insights: row.reason === "collaborative" ? item.collaborative_insights : undefined
               } : undefined
               
               return (

@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react'
-import { getCollabRecommendations, type LocalRecommendation } from '@/services/local/recommendations'
+import { getCollaborativeSearchRecommendations, type CollaborativeRecommendation } from '@/services/local/recommendations'
 import { createMettaApiCall } from '@/services/mettaQueue'
 
-const CACHE_KEY = 'collab_recommendations_cache'
-const CACHE_EXPIRY_KEY = 'collab_recommendations_expiry'
-const CACHE_DURATION = 30 * 60 * 1000 // 5 minutes in milliseconds
+const CACHE_KEY = 'collaborative_search_cache'
+const CACHE_EXPIRY_KEY = 'collaborative_search_expiry'
+const CACHE_DURATION = 30 * 60 * 1000 // 30 minutes in milliseconds
 
 interface CacheData {
   userId: string
-  data: LocalRecommendation[]
+  data: CollaborativeRecommendation[]
   timestamp: number
 }
 
-export function useRecommendationsCache(userId: string | null) {
-  const [recommendations, setRecommendations] = useState<LocalRecommendation[]>([])
+export function useCollaborativeSearchCache(userId: string | null) {
+  const [recommendations, setRecommendations] = useState<CollaborativeRecommendation[]>([])
   const [loading, setLoading] = useState(false)
   const [isFromCache, setIsFromCache] = useState(false)
 
@@ -27,21 +27,21 @@ export function useRecommendationsCache(userId: string | null) {
     // Check if we have valid cached data
     const cachedData = getCachedRecommendations(userId)
     if (cachedData) {
-      console.log('📦 Loading recommendations from cache')
+      console.log('📦 Loading collaborative search recommendations from cache')
       setRecommendations(cachedData)
       setIsFromCache(true)
       return
     }
 
     // Fetch fresh data using MeTTa queue
-    console.log('🌐 Fetching fresh recommendations from API')
+    console.log('🌐 Fetching fresh collaborative search recommendations from API')
     setLoading(true)
     setIsFromCache(false)
     
     // Create queue-safe API call
     const queueSafeApiCall = createMettaApiCall(
-      `collab-recommendations-${userId}`,
-      () => getCollabRecommendations(userId)
+      `collaborative-search-${userId}`,
+      () => getCollaborativeSearchRecommendations(userId)
     )
     
     queueSafeApiCall()
@@ -51,7 +51,7 @@ export function useRecommendationsCache(userId: string | null) {
         cacheRecommendations(userId, items)
       })
       .catch((error) => {
-        console.error('Failed to fetch recommendations:', error)
+        console.error('Failed to fetch collaborative search recommendations:', error)
         setRecommendations([])
       })
       .finally(() => {
@@ -63,11 +63,11 @@ export function useRecommendationsCache(userId: string | null) {
     recommendations,
     loading,
     isFromCache,
-    clearCache: () => clearRecommendationsCache()
+    clearCache: () => clearCollaborativeSearchCache()
   }
 }
 
-function getCachedRecommendations(userId: string): LocalRecommendation[] | null {
+function getCachedRecommendations(userId: string): CollaborativeRecommendation[] | null {
   try {
     const cached = localStorage.getItem(CACHE_KEY)
     const expiry = localStorage.getItem(CACHE_EXPIRY_KEY)
@@ -79,19 +79,19 @@ function getCachedRecommendations(userId: string): LocalRecommendation[] | null 
     
     // Check if cache is expired or for different user
     if (Date.now() > expiryTime || cacheData.userId !== userId) {
-      clearRecommendationsCache()
+      clearCollaborativeSearchCache()
       return null
     }
     
     return cacheData.data
   } catch (error) {
-    console.error('Error reading cache:', error)
-    clearRecommendationsCache()
+    console.error('Error reading collaborative search cache:', error)
+    clearCollaborativeSearchCache()
     return null
   }
 }
 
-function cacheRecommendations(userId: string, data: LocalRecommendation[]) {
+function cacheRecommendations(userId: string, data: CollaborativeRecommendation[]) {
   try {
     const cacheData: CacheData = {
       userId,
@@ -104,18 +104,18 @@ function cacheRecommendations(userId: string, data: LocalRecommendation[]) {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
     localStorage.setItem(CACHE_EXPIRY_KEY, expiryTime.toString())
     
-    console.log('💾 Cached recommendations for user:', userId)
+    console.log('💾 Cached collaborative search recommendations for user:', userId)
   } catch (error) {
-    console.error('Error caching recommendations:', error)
+    console.error('Error caching collaborative search recommendations:', error)
   }
 }
 
-function clearRecommendationsCache() {
+function clearCollaborativeSearchCache() {
   try {
     localStorage.removeItem(CACHE_KEY)
     localStorage.removeItem(CACHE_EXPIRY_KEY)
-    console.log('🗑️ Cleared recommendations cache')
+    console.log('🗑️ Cleared collaborative search recommendations cache')
   } catch (error) {
-    console.error('Error clearing cache:', error)
+    console.error('Error clearing collaborative search cache:', error)
   }
 }

@@ -12,7 +12,7 @@ export type Movie = {
   title: string
   poster: string
   genres: string[]
-  reason: "content" | "collab" | "context"
+  reason: "content" | "collab" | "context" | "collaborative"
   year?: number
 }
 
@@ -24,12 +24,18 @@ export type RecommendationData = {
     points: string[]
   }
   key_matches?: string[]
+  collaborative_insights?: {
+    common_patterns: string[]
+    discovery_insight: string
+    recommending_users: string[]
+  }
 }
 
 const reasonLabel: Record<Movie["reason"], string> = {
   content: "Content-based",
   collab: "Collaborative",
   context: "Time-of-day Context",
+  collaborative: "Community Picks",
 }
 
 export default function MovieCard({
@@ -46,7 +52,7 @@ export default function MovieCard({
   onAdd?: (id: string) => void
   likedState?: boolean | null
   watched?: boolean
-  accent?: "green" | "purple" | "blue" | "yellow" | "red" | "orange" | "gray" | "emerald"
+  accent?: "green" | "purple" | "blue" | "yellow" | "red" | "orange" | "gray" | "emerald" | "teal"
   recommendationData?: RecommendationData
 }) {
   const [imgError, setImgError] = useState(false)
@@ -70,6 +76,7 @@ export default function MovieCard({
     orange: "bg-orange-200 border-orange-700 text-orange-900",
     gray: "bg-gray-200 border-gray-700 text-gray-900",
     emerald: "bg-emerald-200 border-emerald-700 text-emerald-900",
+    teal: "bg-teal-200 border-teal-700 text-teal-900",
   }
 
   const handleCardClick = () => {
@@ -179,8 +186,47 @@ export default function MovieCard({
                 </Badge>
               </div>
 
-              {/* Reason points */}
-              {recommendationData.reason && recommendationData.reason.points && (
+              {/* Collaborative insights or Reason points */}
+              {movie.reason === "collaborative" && recommendationData.collaborative_insights ? (
+                <div className="flex-1 overflow-y-auto">
+                  {/* Discovery insight */}
+                  <div className="mb-4 p-3 bg-blue-100 rounded-lg border-2 border-blue-300">
+                    <p className="text-sm font-bold text-blue-800">
+                      {recommendationData.collaborative_insights.discovery_insight}
+                    </p>
+                  </div>
+                  
+                  {/* Common patterns */}
+                  {recommendationData.collaborative_insights.common_patterns.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-bold text-gray-800 mb-2">Common Patterns:</h4>
+                      <ul className="space-y-1">
+                        {recommendationData.collaborative_insights.common_patterns.map((pattern, index) => (
+                          <li key={index} className="text-sm text-gray-700 flex items-start">
+                            <span className="text-teal-500 mr-2 font-bold">•</span>
+                            {pattern}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Key matches */}
+                  {recommendationData.key_matches && recommendationData.key_matches.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-800 mb-2">Key Matches:</h4>
+                      <ul className="space-y-1">
+                        {recommendationData.key_matches.map((match, index) => (
+                          <li key={index} className="text-sm text-gray-700 flex items-start">
+                            <span className="text-green-500 mr-2 font-bold">•</span>
+                            {match}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : recommendationData.reason && recommendationData.reason.points ? (
                 <div className="flex-1 overflow-y-auto">
                   <ul className="space-y-2">
                     {recommendationData.reason.points.map((point, index) => (
@@ -191,7 +237,7 @@ export default function MovieCard({
                     ))}
                   </ul>
                 </div>
-              )}
+              ) : null}
             </div>
           </Card>
         )}
