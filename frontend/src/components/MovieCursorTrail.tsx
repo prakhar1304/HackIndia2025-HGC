@@ -27,13 +27,26 @@ const movieImages = [
 
 export function MovieCursorTrail() {
   return (
-    <section className="w-full h-screen bg-gradient-to-br from-black via-purple-900 to-black relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-10 left-10 w-20 h-20 bg-purple-500 rounded-full border-4 border-white shadow-[8px_8px_0_0_#fff] animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-16 h-16 bg-yellow-400 rounded-full border-4 border-white shadow-[6px_6px_0_0_#fff] animate-bounce" />
-        <div className="absolute top-1/3 right-10 w-12 h-12 bg-green-400 rounded-full border-2 border-white shadow-[4px_4px_0_0_#fff] animate-ping" />
-        <div className="absolute bottom-1/3 left-20 w-14 h-14 bg-red-400 rounded-full border-3 border-white shadow-[5px_5px_0_0_#fff] animate-pulse" />
+    <section className="w-full h-screen bg-gradient-to-br from-black via-purple-900 to-black text-white relative overflow-hidden">
+      {/* Enhanced background effects */}
+      <div className="absolute inset-0">
+        {/* Main gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 via-transparent to-purple-600/30" />
+        
+        {/* Animated light rays */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-400/10 to-transparent animate-pulse" style={{ animationDelay: "1s" }} />
+        
+        {/* Floating light orbs */}
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-400/20 rounded-full blur-xl animate-pulse" />
+        <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-pink-400/20 rounded-full blur-xl animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-blue-400/20 rounded-full blur-xl animate-pulse" style={{ animationDelay: "3s" }} />
+        
+        {/* Subtle dot pattern */}
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:60px_60px] opacity-30" />
+        
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 animate-pulse" style={{ animationDelay: "4s" }} />
       </div>
 
       <ImageCursorTrail
@@ -46,20 +59,9 @@ export function MovieCursorTrail() {
       >
         <article className="relative z-50 flex flex-col items-center justify-center h-full px-6">
           <div className="text-center">
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-white mb-6 leading-tight tracking-tight">
-              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-transparent animate-pulse">
-                Movies
-              </span>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight tracking-tight pacifico-regular">
+              Step into endless stories .
             </h1>
-            <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-8 leading-tight">
-              That Follow Your{" "}
-              <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent animate-bounce">
-                Imagination
-              </span>
-            </h2>
-            <p className="text-xl md:text-2xl text-purple-200 font-bold max-w-2xl mx-auto opacity-80">
-              Move your cursor and watch the magic happen
-            </p>
           </div>
         </article>
       </ImageCursorTrail>

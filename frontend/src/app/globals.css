@@ -116,6 +116,13 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   
+  /* Pacifico font class */
+  .pacifico-regular {
+    font-family: "Pacifico", cursive;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
   /* Flip card animations */
   .perspective-1000 {
     perspective: 1000px;

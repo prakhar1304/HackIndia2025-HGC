@@ -95,3 +95,38 @@
 !(add-atom &users (user bob))
 !(add-atom &users (liked bob m_tt0167260))
 
+
+; User: prakhaar - Added on 2025-09-23 14:49:34.476050
+!(add-atom &users (user prakhaar))
+!(add-atom &users (fav-genre prakhaar "Action"))
+!(add-atom &users (fav-genre prakhaar "Comedy"))
+!(add-atom &users (fav-genre prakhaar "Drama"))
+!(add-atom &users (fav-genre prakhaar "Fantasy"))
+!(add-atom &users (fav-genre prakhaar "Thriller"))
+!(add-atom &users (language prakhaar "English"))
+!(add-atom &users (language prakhaar "Hindi"))
+!(add-atom &users (country prakhaar "India"))
+!(add-atom &users (liked prakhaar m_tt2911666))
+!(add-atom &users (liked prakhaar m_tt0081573))
+!(add-atom &users (liked prakhaar m_tt0463392))
+
+
+; User: prakhaar - Added on 2025-09-23 14:54:12.421373
+!(add-atom &users (user prakhaar))
+!(add-atom &users (watched prakhaar m_tt0053546))
+
+
+; User: prakhaar - Added on 2025-09-23 14:54:21.218563
+!(add-atom &users (user prakhaar))
+!(add-atom &users (liked prakhaar m_tt1465522))
+
+
+; User: prakhaar - Added on 2025-09-23 14:54:23.508249
+!(add-atom &users (user prakhaar))
+!(add-atom &users (watched prakhaar m_tt0029583))
+
+
+; User: prakhaar - Added on 2025-09-23 14:54:27.341642
+!(add-atom &users (user prakhaar))
+!(add-atom &users (liked prakhaar m_tt0245165))
+
