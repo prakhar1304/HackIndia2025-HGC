@@ -52,8 +52,24 @@ export const getCollabRecommendations = async (userId: string) => {
 };
 
 export const getCollaborativeSearchRecommendations = async (userId: string) => {
-  const { data } = await localApi.get(`/recommendations/collaborative-search/${encodeURIComponent(userId)}`);
-  return (data?.recommendations || []) as CollaborativeRecommendation[];
+  console.log('🌐 Fetching collaborative search recommendations for user:', userId);
+  try {
+    // const { data } = await localApi.get(`/recommendations/collaborative-search/${encodeURIComponent(userId)}`);
+    const { data } = await localApi.get(`/recommendations/collaborative-search/pinky`);
+    console.log('📊 Collaborative search API response:', data);
+    
+    if (!data || !data.ok) {
+      console.warn('⚠️ Collaborative search API returned error:', data?.error || 'Unknown error');
+      return [];
+    }
+    
+    const recommendations = data?.recommendations || [];
+    console.log('✅ Collaborative search recommendations extracted:', recommendations.length, 'items');
+    return recommendations as CollaborativeRecommendation[];
+  } catch (error) {
+    console.error('❌ Collaborative search API call failed:', error);
+    throw error;
+  }
 };
 
 

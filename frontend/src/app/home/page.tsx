@@ -19,10 +19,19 @@ export default function HomePage() {
   const { userId } = useLocalAuth()
   const [feedback, setFeedback] = useState<Record<string, boolean>>({})
   const [history, setHistory] = useState<string[]>([])
+
+
+  console.log("userId", userId);
   
   // Use cache hooks for MeTTa APIs
-  const { recommendations: recs, loading: recsLoading, isFromCache: recsFromCache } = useRecommendationsCache(userId || 'bob')
-  const { recommendations: collaborativeRecs, loading: collabLoading, isFromCache: collabFromCache } = useCollaborativeSearchCache(userId || 'bob')
+  const { recommendations: recs, loading: recsLoading, isFromCache: recsFromCache } = useRecommendationsCache(userId)
+  const { recommendations: collaborativeRecs, loading: collabLoading, isFromCache: collabFromCache, forceRefresh: refreshCollaborative } = useCollaborativeSearchCache(userId)
+  
+  // Debug function to test collaborative refresh
+  if (typeof window !== 'undefined') {
+    (window as any).refreshCollaborative = refreshCollaborative;
+    console.log('🔧 Debug: Call refreshCollaborative() to force refresh collaborative data');
+  }
   const { movies: india, loading: indiaLoading, isFromCache: indiaFromCache } = useIndiaMoviesCache()
   
   const [topRated, setTopRated] = useState<any[]>([])
@@ -119,7 +128,7 @@ export default function HomePage() {
 
   const movieRows = [
     {
-      title: "TasteMatrix" + (recsFromCache ? " (cached)" : ""),
+      title: "TasteMatrix" + (recsFromCache ? "" : ""),
       data: recs,
       bgColor: "bg-gradient-to-r from-green-50 to-green-100",
       titleColor: "text-green-800",
@@ -129,7 +138,7 @@ export default function HomePage() {
       accent: "green" as const,
     },
     {
-      title: "Community Picks" + (collabFromCache ? " (cached)" : ""),
+      title: "Community Picks" + (collabFromCache ? "" : ""),
       data: collaborativeRecs,
       bgColor: "bg-gradient-to-r from-teal-50 to-teal-100",
       titleColor: "text-teal-800",
@@ -148,7 +157,7 @@ export default function HomePage() {
       accent: "purple" as const,
     },
     {
-      title: "India Picks" + (indiaFromCache ? " (cached)" : ""),
+      title: "India Picks" + (indiaFromCache ? "" : ""),
       data: india,
       bgColor: "bg-gradient-to-r from-emerald-50 to-emerald-100",
       titleColor: "text-emerald-800",
@@ -157,16 +166,16 @@ export default function HomePage() {
       metta: true,
       accent: "emerald" as const,
     },
-    {
-      title: "Just for you",
-      data: userRecs,
-      bgColor: "bg-gradient-to-r from-blue-50 to-blue-100",
-      titleColor: "text-blue-800",
-      borderColor: "border-blue-300",
-      reason: "content" as const,
-      metta: true,
-      accent: "blue" as const,
-    },
+    // {
+    //   title: "Just for you",
+    //   data: userRecs,
+    //   bgColor: "bg-gradient-to-r from-blue-50 to-blue-100",
+    //   titleColor: "text-blue-800",
+    //   borderColor: "border-blue-300",
+    //   reason: "content" as const,
+    //   metta: true,
+    //   accent: "blue" as const,
+    // },
     {
       title: "Top Rated",
       data: topRated,

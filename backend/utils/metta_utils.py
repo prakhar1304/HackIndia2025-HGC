@@ -34,12 +34,25 @@ def get_metta() -> MeTTa:
         _metta = _new_metta()
     return _metta
 
+# def atoms_to_strings(results) -> List[str]:
+#     """Convert MeTTa results to string list"""
+#     out: List[str] = []
+#     for r in results:
+#         for a in r:
+#             out.append(str(a))
+#     return out
+
+
+
 def atoms_to_strings(results) -> List[str]:
     """Convert MeTTa results to string list"""
     out: List[str] = []
     for r in results:
-        for a in r:
-            out.append(str(a))
+        if isinstance(r, list):
+            for a in r:
+                out.append(str(a))
+        else:
+            out.append(str(r))
     return out
 
 def ensure_symbol(token: str) -> str:

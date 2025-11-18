@@ -180,12 +180,13 @@ CRITICAL INSTRUCTIONS:
 2. Make each movie's reasoning UNIQUE and DISTINCT
 3. Reference specific users and their preferences
 4. Show clear collaborative patterns and insights
-5. Use emojis and engaging language for better readability
+5. Use engaging language for better readability
 6. Each recommendation should feel like a discovery
 7. Avoid generic reasoning - make it personal and specific
 8. Focus on what makes each movie special from a collaborative perspective
 9. Use the EXACT movie objects from the candidate list
-10. Rank by match_score (highest first)
+10. Ensure recommendations vary across calls by introducing randomness in selection while keeping them high-quality and relevant. Avoid repeating the exact same set of movies each time. 
+11. Do not copy the reasoning example exactly. Vary the structure, phrasing, and order of explanation for each recommendation so every movie feels uniquely described. Add natural randomness to sentence structure while keeping it clear and engaging.
 
 EXAMPLE UNIQUE REASONING:
 "The Matrix was recommended because:
@@ -411,9 +412,12 @@ CRITICAL INSTRUCTIONS:
 9. Mention if movie hasn't been watched yet
 10. Keep reasons detailed but concise (3-5 bullet points per movie)
 11. Use bullet points (•) in the reason field for better readability
-12. If no movies available, return empty recommendations array
+12. If no movies available, return   only  4  to  5  movies with fallback reasoning
 13. NEVER mention "N/A", "Unknown", or missing data in reasons - focus on positive aspects
 14. If director/actor is unknown, focus on genre, rating, country, or other available data
+10. Ensure recommendations vary across calls by introducing randomness in selection while keeping them high-quality and relevant. Avoid repeating the exact same set of movies each time. 
+11. Do not copy the reasoning example exactly. Vary the structure, phrasing, and order of explanation for each recommendation so every movie feels uniquely described. Add natural randomness to sentence structure while keeping it clear and engaging.
+
 
 EXAMPLE REASONING FORMAT:
 "Interstellar was recommended because:

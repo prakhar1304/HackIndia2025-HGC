@@ -25,6 +25,7 @@ def recommend_content(user_id: str):
     # Get MeTTa recommendations
     mids = atoms_to_strings(get_metta().run(f"!(fill-l2 {uid} )"))
     mids = unique(mids)
+    print(f"MeTTa movie IDs: {mids}")
     imdb_ids = metta_ids_to_imdb(mids)
     movies = fetch_movies_by_imdb(imdb_ids)
     
@@ -106,7 +107,9 @@ def collaborative_search(user_id: str):
     
     # Get MeTTa collaborative search recommendations
     mids = atoms_to_strings(get_metta().run(f"!(collaborative-search {uid})"))
+    print(f"MeTTa movie IDs: {mids}")
     mids = unique(mids)
+   
     print(f"Raw MeTTa movie IDs: {mids}")
     
     # Debug: Check if we can find IMDb IDs

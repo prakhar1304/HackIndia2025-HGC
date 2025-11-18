@@ -7,6 +7,7 @@ type LocalAuth = {
   userId: string | null;
   profile: Partial<LocalUserPayload> | null;
   loading: boolean;
+  isClient: boolean;
   start: (userId: string, base: Omit<LocalUserPayload, "userId">) => Promise<void>;
   logout: () => void;
 };
@@ -17,8 +18,10 @@ export function LocalAuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Partial<LocalUserPayload> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const raw = localStorage.getItem("localUserId");
     const rawProfile = localStorage.getItem("localUserProfile");
     if (raw) setUserId(raw);
@@ -47,7 +50,7 @@ export function LocalAuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("localUserProfile");
   }
 
-  const value = useMemo<LocalAuth>(() => ({ userId, profile, loading, start, logout }), [userId, profile, loading]);
+  const value = useMemo<LocalAuth>(() => ({ userId, profile, loading, isClient, start, logout }), [userId, profile, loading, isClient]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

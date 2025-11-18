@@ -111,34 +111,39 @@ def _unique(seq: List[str]) -> List[str]:
     return out
 
 
-def _save_user_to_file(user_id: str, user_data: Dict[str, Any]) -> None:
+def _save_user_to_file(user_id: str, user_data: Dict[str, Any], is_new_user: bool = False) -> None:
     """
     Save user data to user.metta file for persistence across server restarts
     """
     try:
         # Prepare user data in MeTTa format
-        lines = [f"!(add-atom &users (user {user_id}))"]
+        lines = []
         
-        # Add user preferences
-        for genre in user_data.get("fav_genres", []):
-            lines.append(f'!(add-atom &users (fav-genre {user_id} "{genre}"))')
+        # Only add user creation line if it's a new user
+        if is_new_user:
+            lines.append(f"!(add-atom &users (user {user_id}))")
         
-        for actor in user_data.get("fav_actors", []):
-            lines.append(f'!(add-atom &users (fav-actor {user_id} "{actor}"))')
+        # Add user preferences (only if it's a new user or if they have values)
+        if is_new_user:
+            for genre in user_data.get("fav_genres", []):
+                lines.append(f'!(add-atom &users (fav-genre {user_id} "{genre}"))')
+            
+            for actor in user_data.get("fav_actors", []):
+                lines.append(f'!(add-atom &users (fav-actor {user_id} "{actor}"))')
+            
+            for director in user_data.get("fav_directors", []):
+                lines.append(f'!(add-atom &users (fav-director {user_id} "{director}"))')
+            
+            for language in user_data.get("languages", []):
+                lines.append(f'!(add-atom &users (language {user_id} "{language}"))')
+            
+            for country in user_data.get("countries", []):
+                lines.append(f'!(add-atom &users (country {user_id} "{country}"))')
+            
+            for writer in user_data.get("writers", []):
+                lines.append(f'!(add-atom &users (writer {user_id} "{writer}"))')
         
-        for director in user_data.get("fav_directors", []):
-            lines.append(f'!(add-atom &users (fav-director {user_id} "{director}"))')
-        
-        for language in user_data.get("languages", []):
-            lines.append(f'!(add-atom &users (language {user_id} "{language}"))')
-        
-        for country in user_data.get("countries", []):
-            lines.append(f'!(add-atom &users (country {user_id} "{country}"))')
-        
-        for writer in user_data.get("writers", []):
-            lines.append(f'!(add-atom &users (writer {user_id} "{writer}"))')
-        
-        # Add movie interactions
+        # Add movie interactions (these can be added during updates)
         for movie_id in user_data.get("watched", []):
             normalized_id = _normalize_movie_id(movie_id)
             lines.append(f"!(add-atom &users (watched {user_id} {normalized_id}))")
@@ -151,14 +156,19 @@ def _save_user_to_file(user_id: str, user_data: Dict[str, Any]) -> None:
             normalized_id = _normalize_movie_id(movie_id)
             lines.append(f"!(add-atom &users (dislike {user_id} {normalized_id}))")
         
-        # Append to user.metta file (don't overwrite existing data)
-        with open(USER_FILE, "a", encoding="utf-8") as f:
-            f.write(f"\n; User: {user_id} - Added on {__import__('datetime').datetime.now()}\n")
-            for line in lines:
-                f.write(line + "\n")
-            f.write("\n")
+        # Only write to file if there are lines to write
+        if lines:
+            # Append to user.metta file (don't overwrite existing data)
+            with open(USER_FILE, "a", encoding="utf-8") as f:
+                if is_new_user:
+                    f.write(f"\n; User: {user_id} - Added on {__import__('datetime').datetime.now()}\n")
+                else:
+                    f.write(f"\n; User: {user_id} - Updated on {__import__('datetime').datetime.now()}\n")
+                for line in lines:
+                    f.write(line + "\n")
+                f.write("\n")
         
-        print(f"✅ User {user_id} saved to {USER_FILE}")
+        print(f"✅ User {user_id} {'created' if is_new_user else 'updated'} in {USER_FILE}")
         
     except Exception as e:
         print(f"❌ Error saving user {user_id} to file: {e}")
@@ -552,7 +562,7 @@ def add_user():
     _run(lines)
     print(f"User added: {uid}")
     
-    # Save user data to file for persistence
+    # Save user data to file for persistence (new user)
     user_data = {
         "fav_genres": p.get("fav_genres", []),
         "fav_actors": p.get("fav_actors", []),
@@ -564,7 +574,7 @@ def add_user():
         "liked": p.get("liked", []),
         "disliked": p.get("disliked", [])
     }
-    _save_user_to_file(uid, user_data)
+    _save_user_to_file(uid, user_data, is_new_user=True)
     
     return jsonify({"ok": True, "userId": uid})
 
@@ -654,7 +664,7 @@ def update_user(user_id: str):
 
     _run(lines)
     
-    # Save updated user data to file for persistence
+    # Save updated user data to file for persistence (existing user)
     user_data = {
         "fav_genres": p.get("fav_genres", []),
         "fav_actors": p.get("fav_actors", []),
@@ -666,7 +676,7 @@ def update_user(user_id: str):
         "liked": p.get("liked", []),
         "disliked": p.get("disliked", [])
     }
-    _save_user_to_file(uid, user_data)
+    _save_user_to_file(uid, user_data, is_new_user=False)
     
     return jsonify({"ok": True, "userId": uid})
 

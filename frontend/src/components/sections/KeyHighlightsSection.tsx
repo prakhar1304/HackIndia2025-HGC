@@ -31,7 +31,7 @@ export default function KeyHighlightsSection() {
   return (
     <section className="py-20 px-6 bg-white">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-4xl font-black text-center mb-16 text-black">Why MetaReel?</h2>
+        <h2 className="text-4xl font-black text-center mb-16 text-black">Why CuRecsAlpha1?</h2>
         <p className="text-xl font-bold text-center text-gray-600 mb-12 max-w-2xl mx-auto">
           Because you deserve recommendations that make sense, not guesses.
         </p>

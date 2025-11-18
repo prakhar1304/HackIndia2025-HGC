@@ -19,7 +19,7 @@
 
 
 ; Register current directory as 'backend' module
-!(register-module! .)
+; !(register-module! .)
 
 ; Import movies_db from current directory
 !(import! &self movies_db)
@@ -248,7 +248,7 @@
 
 
 
-(= (fill-l2 $u  )
+(= (fill-l2 $u)
    (match &movies (movie $m)
      (let*
        (
@@ -266,17 +266,19 @@
                 True
                 (match &movies (movie __never__) True)))
 
-
-         
-
                 
         ;  ($l (match &self (language  $u $l) $l))
         ;  ($_ (match &movies (language $m $l) True))
 
-        ; ($_ (if (match &self (fav-actor $u $a)
-        ;         (match &movies (has-actor $m $a) True))
-        ;         True
-        ;         (match &movies (movie __never__) True)))
+        ($_ (if (match &self (fav-actor $u $a)
+                (match &movies (has-actor $m $a) True))
+                True
+                (match &movies (movie __never__) True)))
+
+        ($_ (if (match &self (fav-actor $u $a)
+                (match &movies (has-actor $m $a) True))
+                True
+                (match &movies (movie __never__) True)))
 
          ($r (match &movies (imdb-rating $m $r) $r))
          ($_ (if (> $r 8)
@@ -285,7 +287,7 @@
        )
        $m)))
 
-!(fill-l2 raj) 
+; !(fill-l2 bob) 
 
 
 
@@ -355,6 +357,16 @@
            (match &users (watched $other_user $movie) $movie)
            )))  ; Get their movies               
 
+; (= (not-watched $c $m )
+;    (match &users (watched  $c $cm)  
+;                  (if (== $cm $m)
+;                      (trace! ("user-has-watched" $c $m  $cm) ())
+;                      (trace! ("user-has-not-watched" $c $m $cm ) ($m))
+;                   )
+;    )
+; )
+
+
 (= (not-watched $c $m )
    (match &users (watched  $c $cm)  
                  (if (== $cm $m)
@@ -368,4 +380,22 @@
     (let $x  (get-movies-from-other-users-check $u) (not-watched $u $x)) 
 )
 
-!(collaborative-search pinky)
+; !(collaborative-search pinky)
+
+
+
+
+
+(= (movie-twin-u1 $u1)
+    (match &users (watched $u1 $m) $m)
+)
+
+
+(= (movie-twin-u2 $u2)
+    (match &users (watched $u2 $m) $m)
+)
+
+
+
+!(movie-twin-u2 pinky)
+!(movie-twin-u2 raj)

@@ -24,7 +24,7 @@ export default function Header() {
   }
 
   const isLanding = pathname === "/";
-  const { userId } = useLocalAuth();
+  const { userId, isClient } = useLocalAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-white/90 backdrop-blur dark:bg-black/50">
@@ -44,9 +44,17 @@ export default function Header() {
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="flex items-center font-extrabold text-base md:text-lg tracking-wide">
-            <LottieBox src="/animation/MovieTheatre.json" className="mr-2 size-16 border-0 p-0 shadow-none bg-transparent" />
-            <span>Metta Match</span>
+          <Link
+            href="/"
+            className="flex items-center tracking-wide"
+          >
+            <LottieBox
+              src="/animation/MovieTheatre.json"
+              className="mr-2 size-16 border-0 p-0 shadow-none bg-transparent"
+            />
+            <span className="font-extrabold text-xl md:text-3xl">
+              CuRecs
+            </span>
           </Link>
         </div>
 
@@ -75,7 +83,12 @@ export default function Header() {
           <Link href="/innovation" className="hover:underline text-sm">
             Our Innovation
           </Link>
-          {!userId ? (
+          {!isClient ? (
+            // Show loading state during SSR to prevent hydration mismatch
+            <div className="inline-flex items-center gap-1 rounded-md border-2 px-3 py-1 text-sm shadow-[3px_3px_0_0_#000]">
+              <div className="w-16 h-4 bg-gray-200 animate-pulse rounded" />
+            </div>
+          ) : !userId ? (
             <Link href="/onboarding" className="inline-flex items-center gap-1 rounded-md border-2 px-3 py-1 text-sm shadow-[3px_3px_0_0_#000]">Start</Link>
           ) : (
             <Link href="/profile" className="inline-flex items-center gap-1 rounded-md border-2 px-3 py-1 text-sm shadow-[3px_3px_0_0_#000]">

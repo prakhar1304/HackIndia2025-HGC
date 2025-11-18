@@ -20,7 +20,7 @@ export default function HomePage() {
   return (
     <div className="relative">
       {/* Real website underneath */}
-      <main className={`min-h-screen bg-white transition-opacity duration-500 ${loadingDone ? 'opacity-100' : 'opacity-50'}`}>
+      <main className={`min-h-screen bg-white transition-opacity duration-500 `}>
         {/* Hero Section */}
         <HeroSection onFindMovie={handleFindMovie} />
 
@@ -39,10 +39,7 @@ export default function HomePage() {
 
       <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
 
-      {/* Loader on top until loading is done */}
-      {!loadingDone && (
-        <PageLoader onComplete={() => setLoadingDone(true)} />
-      )}
+  
     </div>
   )
 }
